@@ -61,13 +61,13 @@ export const POST = async (req: Request): Promise<Response> => {
             const subject =
               result.email?.subject || `email-${i + 1}`;
             const body = result.email?.body || '';
-            const score = result.score.toFixed(3);
+            const score = result.score;
 
             return [
               `### 📧 Email ${i + 1}: [${subject}](#${subject.replace(/[^a-zA-Z0-9]/g, '-')})`,
               `**From:** ${from}`,
               `**To:** ${to}`,
-              `**Relevance Score:** ${score}`,
+              `**Relevance Score:** ${score.toFixed(3)}`,
               body,
               '---',
             ].join('\n\n');
