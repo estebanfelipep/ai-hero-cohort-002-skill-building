@@ -2,19 +2,14 @@ import { google } from '@ai-sdk/google';
 import {
   createUIMessageStream,
   createUIMessageStreamResponse,
-  streamObject,
+  generateObject,
   streamText,
   type UIMessage,
 } from 'ai';
 import z from 'zod';
 import { searchEmails } from './bm25.ts';
 
-export type MyMessage = UIMessage<
-  unknown,
-  {
-    queries: string[];
-  }
->;
+export type MyMessage = UIMessage;
 
 const formatMessageHistory = (messages: UIMessage[]) => {
   return messages
@@ -38,7 +33,7 @@ export const POST = async (req: Request): Promise<Response> => {
 
   const stream = createUIMessageStream<MyMessage>({
     execute: async ({ writer }) => {
-      const keywords = streamObject({
+      const keywords = await generateObject({
         model: google('gemini-2.0-flash-001'),
         system: `You are a helpful email assistant, able to search through emails for information.
           Your job is to generate a list of keywords which will be used to search emails.
@@ -52,24 +47,9 @@ export const POST = async (req: Request): Promise<Response> => {
         `,
       });
 
-      const keywordsPartId = crypto.randomUUID();
+      const allKeywords = keywords.object.keywords;
 
-      for await (const part of keywords.partialObjectStream) {
-        if (
-          part.keywords &&
-          part.keywords.every(
-            (keyword) => typeof keyword === 'string',
-          )
-        ) {
-          writer.write({
-            type: 'data-queries',
-            data: part.keywords,
-            id: keywordsPartId,
-          });
-        }
-      }
-
-      const allKeywords = (await keywords.object).keywords;
+      console.log('Generated keywords:', allKeywords);
 
       const searchResults = await searchEmails(allKeywords);
 

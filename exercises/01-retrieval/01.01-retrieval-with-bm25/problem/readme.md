@@ -90,55 +90,12 @@ Finally, we'll use these selected emails as context for the LLM to generate an i
 
 BM25 is a simple starting point for this task - not perfect, but effective for getting started. In future exercises, we'll explore more sophisticated approaches.
 
-## The Frontend
-
-I've been quite generous this lesson and given you a pre-built custom data part you can hook up to.
-
-It's called `data-queries` and it's an array of strings.
-
-```ts
-export type MyMessage = UIMessage<
-  unknown,
-  {
-    queries: string[];
-  }
->;
-```
-
-These will be displayed in the `Message` component:
-
-```tsx
-{
-  parts.map((part) => {
-    if (part.type === 'data-queries') {
-      return (
-        <div key={part.id} className="...">
-          <h2 className="...">Queries</h2>
-          <ul className="...">
-            {Object.values(part.data).map((query) => (
-              <li key={query}>{query}</li>
-            ))}
-          </ul>
-        </div>
-      );
-    }
-
-    return null;
-  });
-}
-```
-
-So all you need to do is write the queries to the stream writer.
-
 ## Steps To Complete
 
-- [ ] Implement the keyword generator using `streamObject` with the Google Gemini model
+- [ ] Implement the keyword generator using `generateObject` with the Google Gemini model
   - Use the provided `KEYWORD_GENERATOR_SYSTEM_PROMPT`
   - Define a schema using Zod that specifies an array of strings for keywords
   - Pass the formatted message history to the prompt
-
-- [ ] Write the queries to the stream writer using `writer.write`
-  - Since we only need one `queries` data part, make sure you upsert it using a stable `id`. Check the [reference](/exercises/99-reference/99.4-custom-data-parts-id-reconciliation/explainer/readme.md) for an example of how to do this.
 
 - [ ] Use the `searchEmails` function with the generated keywords
   - Wait for the complete keywords object to be available
@@ -147,5 +104,5 @@ So all you need to do is write the queries to the stream writer.
 
 - [ ] Test your implementation by running the local dev server
   - Try asking different questions about emails to see if the assistant returns relevant emails
-  - Check if the keyword queries are displayed correctly in the UI
   - Verify that the responses include citations from email subjects
+  - **Debugging tip**: Use `console.log()` to view the generated keywords in your terminal - this helps you understand what search terms the LLM is creating

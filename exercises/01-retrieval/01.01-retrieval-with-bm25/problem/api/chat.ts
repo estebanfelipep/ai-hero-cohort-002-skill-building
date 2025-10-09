@@ -6,12 +6,7 @@ import {
   type UIMessage,
 } from 'ai';
 
-export type MyMessage = UIMessage<
-  unknown,
-  {
-    queries: string[];
-  }
->;
+export type MyMessage = UIMessage;
 
 const formatMessageHistory = (messages: UIMessage[]) => {
   return messages
