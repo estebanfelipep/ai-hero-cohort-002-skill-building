@@ -9,8 +9,6 @@ import {
 import { z } from 'zod';
 import { searchEmails } from './search.ts';
 
-export type MyMessage = UIMessage<unknown, {}>;
-
 const formatMessageHistory = (messages: UIMessage[]) => {
   return messages
     .map((message) => {
@@ -38,10 +36,10 @@ You should be selective and only include emails that are genuinely helpful for a
 Return the IDs as a simple array of numbers.`;
 
 export const POST = async (req: Request): Promise<Response> => {
-  const body: { messages: MyMessage[] } = await req.json();
+  const body: { messages: UIMessage[] } = await req.json();
   const { messages } = body;
 
-  const stream = createUIMessageStream<MyMessage>({
+  const stream = createUIMessageStream({
     execute: async ({ writer }) => {
       const keywords = await generateObject({
         model: google('gemini-2.0-flash-001'),

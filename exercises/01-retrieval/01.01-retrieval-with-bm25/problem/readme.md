@@ -20,10 +20,10 @@ Let's examine our setup. We have a POST route handler that receives messages fro
 
 ```ts
 export const POST = async (req: Request): Promise<Response> => {
-  const body: { messages: MyMessage[] } = await req.json();
+  const body: { messages: UIMessage[] } = await req.json();
   const { messages } = body;
 
-  const stream = createUIMessageStream<MyMessage>({
+  const stream = createUIMessageStream({
     execute: async ({ writer }) => {
       // TODO: Implement keyword generator
       const keywords = TODO;

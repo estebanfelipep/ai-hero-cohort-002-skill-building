@@ -7,8 +7,6 @@ import {
 } from 'ai';
 import { searchEmails } from './create-embeddings.ts';
 
-export type MyMessage = UIMessage<unknown, {}>;
-
 const formatMessageHistory = (messages: UIMessage[]) => {
   return messages
     .map((message) => {
@@ -26,10 +24,10 @@ const formatMessageHistory = (messages: UIMessage[]) => {
 };
 
 export const POST = async (req: Request): Promise<Response> => {
-  const body: { messages: MyMessage[] } = await req.json();
+  const body: { messages: UIMessage[] } = await req.json();
   const { messages } = body;
 
-  const stream = createUIMessageStream<MyMessage>({
+  const stream = createUIMessageStream({
     execute: async ({ writer }) => {
       // TODO: call the searchEmails function with the
       // conversation history to get the search results

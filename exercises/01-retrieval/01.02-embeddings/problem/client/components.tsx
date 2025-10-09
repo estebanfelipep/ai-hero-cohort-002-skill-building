@@ -1,5 +1,5 @@
 import React, { type ReactNode } from 'react';
-import type { MyMessage } from '../api/chat.ts';
+import type { UIMessage } from 'ai';
 import ReactMarkdown from 'react-markdown';
 
 export const Wrapper = (props: {
@@ -17,7 +17,7 @@ export const Message = ({
   parts,
 }: {
   role: string;
-  parts: MyMessage['parts'];
+  parts: UIMessage['parts'];
 }) => (
   <div className="prose prose-invert my-6">
     <ReactMarkdown>

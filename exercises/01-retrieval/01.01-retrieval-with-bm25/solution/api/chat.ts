@@ -9,8 +9,6 @@ import {
 import z from 'zod';
 import { searchEmails } from './bm25.ts';
 
-export type MyMessage = UIMessage;
-
 const formatMessageHistory = (messages: UIMessage[]) => {
   return messages
     .map((message) => {
@@ -28,10 +26,10 @@ const formatMessageHistory = (messages: UIMessage[]) => {
 };
 
 export const POST = async (req: Request): Promise<Response> => {
-  const body: { messages: MyMessage[] } = await req.json();
+  const body: { messages: UIMessage[] } = await req.json();
   const { messages } = body;
 
-  const stream = createUIMessageStream<MyMessage>({
+  const stream = createUIMessageStream({
     execute: async ({ writer }) => {
       const keywords = await generateObject({
         model: google('gemini-2.0-flash-001'),

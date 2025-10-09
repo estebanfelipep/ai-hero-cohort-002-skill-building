@@ -68,10 +68,10 @@ Once those are implemented, we need to update the chat route. In [`chat.ts`](./a
 
 ```ts
 export const POST = async (req: Request): Promise<Response> => {
-  const body: { messages: MyMessage[] } = await req.json();
+  const body: { messages: UIMessage[] } = await req.json();
   const { messages } = body;
 
-  const stream = createUIMessageStream<MyMessage>({
+  const stream = createUIMessageStream({
     execute: async ({ writer }) => {
       // TODO: call the searchEmails function with the
       // conversation history to get the search results

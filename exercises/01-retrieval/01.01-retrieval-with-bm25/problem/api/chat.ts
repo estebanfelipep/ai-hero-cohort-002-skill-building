@@ -6,8 +6,6 @@ import {
   type UIMessage,
 } from 'ai';
 
-export type MyMessage = UIMessage;
-
 const formatMessageHistory = (messages: UIMessage[]) => {
   return messages
     .map((message) => {
@@ -30,10 +28,10 @@ const KEYWORD_GENERATOR_SYSTEM_PROMPT = `
 `;
 
 export const POST = async (req: Request): Promise<Response> => {
-  const body: { messages: MyMessage[] } = await req.json();
+  const body: { messages: UIMessage[] } = await req.json();
   const { messages } = body;
 
-  const stream = createUIMessageStream<MyMessage>({
+  const stream = createUIMessageStream({
     execute: async ({ writer }) => {
       // TODO: Implement a keyword generator that generates a list of keywords
       // based on the conversation history. Use generateObject to do this.

@@ -3,10 +3,9 @@ import React, { useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { ChatInput, Message, Wrapper } from './components.tsx';
 import './tailwind.css';
-import type { MyMessage } from '../api/chat.ts';
 
 const App = () => {
-  const { messages, sendMessage } = useChat<MyMessage>({});
+  const { messages, sendMessage } = useChat({});
 
   const [input, setInput] = useState(
     `What did David say about the mortgage application?`,
