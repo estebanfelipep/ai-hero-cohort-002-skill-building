@@ -61,6 +61,7 @@
     "ai-hero-cli": "^0.0.24",
     "husky": "^9.1.7",
     "prettier": "^3.6.2",
+    "tailwind-scrollbar": "^4.0.2",
     "tsx": "^4.20.3"
   },
   "prettier": {
