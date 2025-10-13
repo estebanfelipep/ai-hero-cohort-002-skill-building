@@ -214,6 +214,17 @@
 - Scale from 5 manual cases (06.01) to 32 synthetic cases
 - Identify which memory operations have low accuracy for prompt tuning
 
+### [06.03 - Evaluating Retrieval](./exercises/06-evals-project-work/06.03-evaluating-retrieval/explainer/notes.md) (Explainer)
+
+- Test retrieval mechanism quality using production dataset
+- Manual dataset analysis: identify 8-10 key factual emails with clear retrieval signals
+- Create test cases: natural language queries + expected email IDs
+- Import search algorithm from project work (lesson 2.2: BM25 + embeddings + RRF)
+- Graduated scoring: 1.0 if top result, 0.5 if positions 2-5, 0 otherwise
+- Quantify retrieval accuracy across diverse question types (amounts, dates, reasons, people)
+- Focus on mechanism quality, not agent output
+- Catch regressions when changing search implementation or tuning parameters
+
 ## Section 07: Human-in-the-Loop Skill Building
 
 ### [07.01 - HITL Intro](./exercises/07-human-in-the-loop-skill-building/07.01-hitl-intro/explainer/readme.md) (Explainer)
