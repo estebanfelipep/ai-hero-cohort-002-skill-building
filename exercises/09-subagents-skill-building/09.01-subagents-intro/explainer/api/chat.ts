@@ -1,4 +1,5 @@
 import {
+  convertToModelMessages,
   createUIMessageStream,
   createUIMessageStreamResponse,
   type UIMessage,
@@ -17,25 +18,6 @@ const subagents = {
   'scheduler-agent': schedulerAgent,
 };
 
-const formatMessageHistory = (messages: MyMessage[]) => {
-  return messages
-    .map((message) => {
-      return [
-        message.role === 'user' ? '## User' : '## Assistant',
-        message.parts
-          .map((part) => {
-            if (part.type === 'text') {
-              return part.text;
-            }
-
-            return '';
-          })
-          .join('\n'),
-      ].join('\n');
-    })
-    .join('\n');
-};
-
 export const POST = async (req: Request): Promise<Response> => {
   const body: {
     messages: MyMessage[];
@@ -47,10 +29,8 @@ export const POST = async (req: Request): Promise<Response> => {
 
   const stream = createUIMessageStream<MyMessage>({
     execute: async ({ writer }) => {
-      const formattedMessages = formatMessageHistory(messages);
-
       const result = await subagents[subagent]({
-        prompt: formattedMessages,
+        messages: convertToModelMessages(messages),
       });
 
       const textPartId = crypto.randomUUID();

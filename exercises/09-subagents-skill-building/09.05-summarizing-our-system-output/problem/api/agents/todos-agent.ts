@@ -1,4 +1,4 @@
-import { stepCountIs, streamText, tool } from 'ai';
+import { stepCountIs, streamText, tool, type ModelMessage } from 'ai';
 
 import { google } from '@ai-sdk/google';
 import { join } from 'node:path';
@@ -39,7 +39,7 @@ const formatTodos = (todos: Todo[]) => {
     .join('\n\n');
 };
 
-export const todosAgent = async (opts: { prompt: string }) => {
+export const todosAgent = async (opts: { messages: ModelMessage[] }) => {
   const db = await todosDb.loadDatabase();
   const outstandingTodos = Object.values(db.todos).filter(
     (todo) => !todo.completed,
@@ -66,7 +66,7 @@ export const todosAgent = async (opts: { prompt: string }) => {
 
       ${formatTodos(outstandingTodos)}
     `,
-    prompt: opts.prompt,
+    messages: opts.messages,
     tools: {
       createTodos: tool({
         description: 'Create a new todo',

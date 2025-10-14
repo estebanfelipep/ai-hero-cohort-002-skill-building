@@ -1,5 +1,6 @@
 import { google } from '@ai-sdk/google';
 import {
+  convertToModelMessages,
   createUIMessageStream,
   createUIMessageStreamResponse,
   generateObject,
@@ -8,22 +9,6 @@ import {
 } from 'ai';
 import { z } from 'zod';
 import { searchEmails } from './search.ts';
-
-const formatMessageHistory = (messages: UIMessage[]) => {
-  return messages
-    .map((message) => {
-      return `${message.role}: ${message.parts
-        .map((part) => {
-          if (part.type === 'text') {
-            return part.text;
-          }
-
-          return '';
-        })
-        .join('')}`;
-    })
-    .join('\n');
-};
 
 const RERANKER_SYSTEM_PROMPT = `You are a search result reranker. Your job is to analyze a list of emails and return only the IDs of the most relevant emails for answering the user's question.
 
@@ -59,10 +44,7 @@ export const POST = async (req: Request): Promise<Response> => {
               'A search query which will be used to search emails. Use this for broader terms.',
             ),
         }),
-        prompt: `
-          Conversation history:
-          ${formatMessageHistory(messages)}
-        `,
+        messages: convertToModelMessages(messages),
       });
 
       console.dir(keywords.object, { depth: null });
@@ -118,6 +100,27 @@ export const POST = async (req: Request): Promise<Response> => {
         },
       );
 
+      const emailSnippets = [
+        '## Emails',
+        ...topSearchResults.map((result, i) => {
+          const from = result.email?.from || 'unknown';
+          const to = result.email?.to || 'unknown';
+          const subject =
+            result.email?.subject || `email-${i + 1}`;
+          const body = result.email?.body || '';
+
+          return [
+            `### 📧 Email ${i + 1}: [${subject}](#${subject.replace(/[^a-zA-Z0-9]/g, '-')})`,
+            `**From:** ${from}`,
+            `**To:** ${to}`,
+            body,
+            '---',
+          ].join('\n\n');
+        }),
+        '## Instructions',
+        "Based on the emails above, please answer the user's question. Always cite your sources using the email subject in markdown format.",
+      ].join('\n\n');
+
       const answer = streamText({
         model: google('gemini-2.0-flash-001'),
         system: `You are a helpful email assistant that answers questions based on email content.
@@ -125,28 +128,13 @@ export const POST = async (req: Request): Promise<Response> => {
           ALWAYS cite sources using markdown formatting with the email subject as the source.
           Be concise but thorough in your explanations.
         `,
-        prompt: [
-          '## Conversation History',
-          formatMessageHistory(messages),
-          '## Emails',
-          ...topSearchResults.map((result, i) => {
-            const from = result.email?.from || 'unknown';
-            const to = result.email?.to || 'unknown';
-            const subject =
-              result.email?.subject || `email-${i + 1}`;
-            const body = result.email?.body || '';
-
-            return [
-              `### 📧 Email ${i + 1}: [${subject}](#${subject.replace(/[^a-zA-Z0-9]/g, '-')})`,
-              `**From:** ${from}`,
-              `**To:** ${to}`,
-              body,
-              '---',
-            ].join('\n\n');
-          }),
-          '## Instructions',
-          "Based on the emails above, please answer the user's question. Always cite your sources using the email subject in markdown format.",
-        ].join('\n\n'),
+        messages: [
+          ...convertToModelMessages(messages),
+          {
+            role: 'user',
+            content: emailSnippets,
+          },
+        ],
       });
 
       writer.merge(answer.toUIMessageStream());

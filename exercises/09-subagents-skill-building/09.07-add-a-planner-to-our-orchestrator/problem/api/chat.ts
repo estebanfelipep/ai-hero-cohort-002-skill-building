@@ -1,5 +1,6 @@
 import { google } from '@ai-sdk/google';
 import {
+  convertToModelMessages,
   createUIMessageStream,
   createUIMessageStreamResponse,
   streamObject,
@@ -31,42 +32,6 @@ const subagents = {
   'student-notes-manager': studentNotesManagerAgent,
   'song-finder-agent': songFinderAgent,
   'scheduler-agent': schedulerAgent,
-};
-
-const formatMessageHistory = (messages: MyMessage[]) => {
-  return messages
-    .map((message) => {
-      return [
-        message.role === 'user' ? '## User' : '## Assistant',
-        message.parts
-          .map((part) => {
-            if (part.type === 'text') {
-              return part.text;
-            }
-
-            if (part.type === 'data-task') {
-              return [
-                `The ${part.data.subagent} subagent was asked to perform the following task:`,
-                `<task>`,
-                part.data.task,
-                `</task>`,
-                ...(part.data.output
-                  ? [
-                      `The subagent provided the following output:`,
-                      `<output>`,
-                      part.data.output,
-                      `</output>`,
-                    ]
-                  : []),
-              ].join('\n');
-            }
-
-            return '';
-          })
-          .join('\n'),
-      ].join('\n');
-    })
-    .join('\n');
 };
 
 const getPlanSystemPrompt = () => {
@@ -112,13 +77,12 @@ export const POST = async (req: Request): Promise<Response> => {
 
   const stream = createUIMessageStream<MyMessage>({
     execute: async ({ writer }) => {
-      const formattedMessages = formatMessageHistory(messages);
       let diary = '';
       let step = 0;
 
       // TODO: Before the loop, call streamText to generate a plan.
       // Use the getPlanSystemPrompt function to create the system prompt.
-      // Pass in the formatted messages to create the prompt.
+      // Pass in convertToModelMessages(messages) as the messages.
       const planResult = TODO;
 
       // TODO: Write the plan to the client by monitoring the plan's
@@ -162,16 +126,12 @@ export const POST = async (req: Request): Promise<Response> => {
 
             Think step-by-step - first decide what tasks need to be performed,
             then decide which subagent to use for each task.
-          `,
-          prompt: `
-            Initial prompt:
-            
-            ${formattedMessages}
-            
+
             The diary of the work performed so far:
-            
+
             ${diary}
           `,
+          messages: convertToModelMessages(messages),
           schema: z.object({
             tasks: z.array(
               z.object({
@@ -249,7 +209,7 @@ export const POST = async (req: Request): Promise<Response> => {
               let summary = '';
 
               await summarizeAgentOutput({
-                initialPrompt: formattedMessages,
+                initialPrompt: convertToModelMessages(messages),
                 agentOutput: result,
                 onSummaryDelta: (delta) => {
                   summary += delta;
@@ -319,16 +279,12 @@ export const POST = async (req: Request): Promise<Response> => {
           You will be given a diary of the work performed so far and the user's initial prompt.
 
           You should provide a summary of the tasks performed and provide the results to the user.
-        `,
-        prompt: `
-          Initial prompt:
-          
-          ${formattedMessages}
-          
+
           The diary of the work performed so far:
-          
+
           ${diary}
         `,
+        messages: convertToModelMessages(messages),
       });
 
       const textPartId = crypto.randomUUID();

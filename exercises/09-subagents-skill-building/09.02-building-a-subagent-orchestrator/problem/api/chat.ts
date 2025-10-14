@@ -1,5 +1,6 @@
 import { google } from '@ai-sdk/google';
 import {
+  convertToModelMessages,
   createUIMessageStream,
   createUIMessageStreamResponse,
   generateObject,
@@ -18,25 +19,6 @@ const subagents = {
   'student-notes-manager': studentNotesManagerAgent,
   'song-finder-agent': songFinderAgent,
   'scheduler-agent': schedulerAgent,
-};
-
-const formatMessageHistory = (messages: MyMessage[]) => {
-  return messages
-    .map((message) => {
-      return [
-        message.role === 'user' ? '## User' : '## Assistant',
-        message.parts
-          .map((part) => {
-            if (part.type === 'text') {
-              return part.text;
-            }
-
-            return '';
-          })
-          .join('\n'),
-      ].join('\n');
-    })
-    .join('\n');
 };
 
 const getSystemPrompt = () => {
@@ -71,8 +53,6 @@ export const POST = async (req: Request): Promise<Response> => {
 
   const stream = createUIMessageStream<MyMessage>({
     execute: async ({ writer }) => {
-      const formattedMessages = formatMessageHistory(messages);
-
       // TODO: call generateObject to generate a list of tasks.
       // These tasks should be an array of objects with the following
       // properties:
@@ -80,7 +60,7 @@ export const POST = async (req: Request): Promise<Response> => {
       // - task: the task to perform
       //
       // The system prompt is in the getSystemPrompt function above.
-      // The prompt should be the formatted messages above.
+      // The messages should be passed using convertToModelMessages.
       const tasksResult = TODO;
 
       const tasks = tasksResult.object.tasks;

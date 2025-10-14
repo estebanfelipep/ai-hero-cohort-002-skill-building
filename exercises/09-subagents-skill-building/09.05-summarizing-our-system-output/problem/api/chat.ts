@@ -1,5 +1,6 @@
 import { google } from '@ai-sdk/google';
 import {
+  convertToModelMessages,
   createUIMessageStream,
   createUIMessageStreamResponse,
   streamObject,
@@ -32,42 +33,6 @@ const subagents = {
   'scheduler-agent': schedulerAgent,
 };
 
-const formatMessageHistory = (messages: MyMessage[]) => {
-  return messages
-    .map((message) => {
-      return [
-        message.role === 'user' ? '## User' : '## Assistant',
-        message.parts
-          .map((part) => {
-            if (part.type === 'text') {
-              return part.text;
-            }
-
-            if (part.type === 'data-task') {
-              return [
-                `The ${part.data.subagent} subagent was asked to perform the following task:`,
-                `<task>`,
-                part.data.task,
-                `</task>`,
-                ...(part.data.output
-                  ? [
-                      `The subagent provided the following output:`,
-                      `<output>`,
-                      part.data.output,
-                      `</output>`,
-                    ]
-                  : []),
-              ].join('\n');
-            }
-
-            return '';
-          })
-          .join('\n'),
-      ].join('\n');
-    })
-    .join('\n');
-};
-
 const getSummarizeSystemPrompt = () => {
   return `
     The current date and time is ${new Date().toISOString()}.
@@ -86,7 +51,6 @@ export const POST = async (req: Request): Promise<Response> => {
 
   const stream = createUIMessageStream<MyMessage>({
     execute: async ({ writer }) => {
-      const formattedMessages = formatMessageHistory(messages);
       let diary = '';
       let step = 0;
 
@@ -120,16 +84,12 @@ export const POST = async (req: Request): Promise<Response> => {
 
             Think step-by-step - first decide what tasks need to be performed,
             then decide which subagent to use for each task.
-          `,
-          prompt: `
-            Initial prompt:
-            
-            ${formattedMessages}
-            
+
             The diary of the work performed so far:
-            
+
             ${diary ?? 'No work has been performed yet.'}
           `,
+          messages: convertToModelMessages(messages),
           schema: z.object({
             tasks: z.array(
               z.object({
@@ -260,8 +220,8 @@ export const POST = async (req: Request): Promise<Response> => {
 
       // TODO: Call streamText to summarize the results of the
       // multi-agent system. Use the getSummarizeSystemPrompt
-      // function to get the system prompt. Use the formattedMessages
-      // and diary to get the prompt.
+      // function to get the system prompt. Use convertToModelMessages(messages)
+      // and diary to create the prompt.
       const summarizeResult = TODO;
 
       // TODO: Write the summary to the client, either by manually

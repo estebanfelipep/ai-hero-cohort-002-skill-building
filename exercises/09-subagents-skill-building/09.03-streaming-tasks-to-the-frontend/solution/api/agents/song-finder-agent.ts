@@ -1,4 +1,4 @@
-import { stepCountIs, streamText, tool } from 'ai';
+import { stepCountIs, streamText, tool, type ModelMessage } from 'ai';
 
 import { google } from '@ai-sdk/google';
 import { tavily } from '@tavily/core';
@@ -6,7 +6,7 @@ import z from 'zod';
 import { formatModelMessages } from '../utils.ts';
 
 export const songFinderAgent = async (opts: {
-  prompt: string;
+  messages: ModelMessage[];
 }) => {
   const tavilyClient = tavily({
     apiKey: process.env.TAVILY_API_KEY,
@@ -21,7 +21,7 @@ export const songFinderAgent = async (opts: {
       You will need to use the Tavily API to find the song, using your searchWeb tool.
       You will need to return the song name, artist, and album.
     `,
-    prompt: opts.prompt,
+    messages: opts.messages,
     tools: {
       searchWeb: tool({
         description: 'Search the web for information',

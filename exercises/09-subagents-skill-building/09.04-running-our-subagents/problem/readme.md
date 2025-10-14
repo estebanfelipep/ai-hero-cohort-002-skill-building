@@ -109,14 +109,17 @@ For the orchestrator to make informed decisions, we need to pass the diary into 
 ```ts
 // Inside the while loop in our api/chat.ts
 const tasksResult = streamObject({
-  // TODO: Pass the diary into the prompt so that the
+  // TODO: Pass the diary into the system prompt so that the
   // orchestrator can track the work performed so far
   // and plan the next step.
-  prompt: `
-    Initial prompt:
+  system: `
+    // ...existing system prompt...
 
-    ${formattedMessages}
+    Diary:
+
+    ${diary}
   `,
+  messages: convertToModelMessages(messages),
   // Rest of the code...
 ```
 
@@ -124,46 +127,17 @@ This allows the orchestrator to see what has been done already and avoid repeati
 
 ## Preserving Task History Between Runs
 
-Finally, we need to update the message history to include the task parts. This ensures that if we ask a follow-up question, the agent will know what's been done already:
+The task parts are automatically preserved in the message history by the AI SDK's `convertToModelMessages` function. When you pass messages through `convertToModelMessages`, it includes all data parts (including task parts) in the conversation context.
 
-````ts
-// Inside formatMessageHistory in our api/chat.ts
-const formatMessageHistory = (messages: MyMessage[]) => {
-  return messages
-    .map((message) => {
-      return [
-        message.role === 'user' ? '## User' : '## Assistant',
-        message.parts
-          .map((part) => {
-            if (part.type === 'text') {
-              return part.text;
-            }
+This ensures that if you ask a follow-up question, the agent will know what's been done already:
 
-            // TODO: The task parts need to be formatted and
-            // passed into the message history. Without this,
-            // no task history will be preserved between runs.
-            // This means that in a situation like this:
-            //
-            // ```
-            // User: Find all of my lessons for tomorrow and pull up all of their notes.
-            // Task Data: I found one lesson with id "123" at 9AM.
-            // Assistant: You have a lesson at 9AM tomorrow.
-            // ```
-            //
-            // The information about the "id" will be lost, and
-            // will need to be re-fetched from the subagent.
-            TODO;
+```
+User: Find all of my lessons for tomorrow and pull up all of their notes.
+Task Data: I found one lesson with id "123" at 9AM.
+Assistant: You have a lesson at 9AM tomorrow.
+```
 
-            return '';
-          })
-          .join('\n'),
-      ].join('\n');
-    })
-    .join('\n');
-};
-````
-
-This converts the task data into a string format that can be included in the message history - so that the orchestrator can see what's been done already in previous runs.
+The task data (including the lesson id "123") is automatically preserved in the message history, so it doesn't need to be re-fetched from the subagent.
 
 Good luck, and I'll see you in the solution!
 
@@ -179,10 +153,8 @@ Good luck, and I'll see you in the solution!
 
 - [ ] In the `catch` block, update the diary and UI with the error
 
-- [ ] Pass the diary into the orchestrator's prompt so it can track work performed
-
-- [ ] Update the message history to include task parts so they're preserved between conversations
+- [ ] Pass the diary into the orchestrator's system prompt so it can track work performed
 
 - [ ] Test your implementation by making a request in the UI and watching tasks being executed and checked off
 
-- [ ] Verify that the orchestrator correctly uses the data parts in the me to plan subsequent steps
+- [ ] Verify that the orchestrator correctly uses the diary and data parts to plan subsequent steps

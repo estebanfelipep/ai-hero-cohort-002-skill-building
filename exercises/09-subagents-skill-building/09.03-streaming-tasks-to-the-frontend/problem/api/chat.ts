@@ -1,5 +1,6 @@
 import { google } from '@ai-sdk/google';
 import {
+  convertToModelMessages,
   createUIMessageStream,
   createUIMessageStreamResponse,
   generateObject,
@@ -35,24 +36,6 @@ const subagents = {
   'scheduler-agent': schedulerAgent,
 };
 
-const formatMessageHistory = (messages: MyMessage[]) => {
-  return messages
-    .map((message) => {
-      return [
-        message.role === 'user' ? '## User' : '## Assistant',
-        message.parts
-          .map((part) => {
-            if (part.type === 'text') {
-              return part.text;
-            }
-
-            return '';
-          })
-          .join('\n'),
-      ].join('\n');
-    })
-    .join('\n');
-};
 
 export const POST = async (req: Request): Promise<Response> => {
   const body: { messages: MyMessage[] } = await req.json();
@@ -60,8 +43,6 @@ export const POST = async (req: Request): Promise<Response> => {
 
   const stream = createUIMessageStream<MyMessage>({
     execute: async ({ writer }) => {
-      const formattedMessages = formatMessageHistory(messages);
-
       // TODO: Swap this over to streamObject instead of generateObject.
       const tasksResult = await generateObject({
         model: google('gemini-2.0-flash'),
@@ -88,11 +69,7 @@ export const POST = async (req: Request): Promise<Response> => {
           Think step-by-step - first decide what tasks need to be performed,
           then decide which subagent to use for each task.
         `,
-        prompt: `
-          Initial prompt:
-          
-          ${formattedMessages}
-        `,
+        messages: convertToModelMessages(messages),
         schema: z.object({
           tasks: z.array(
             z.object({

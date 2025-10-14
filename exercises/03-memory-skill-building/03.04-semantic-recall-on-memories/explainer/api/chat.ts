@@ -22,25 +22,6 @@ import { searchMemories } from './search.ts';
 
 export type MyMessage = UIMessage<unknown, {}>;
 
-const formatMessageHistory = (messages: UIMessage[]) => {
-  return messages
-    .map((message) => {
-      return `${message.role}: ${partsToText(message.parts)}`;
-    })
-    .join('\n');
-};
-
-const partsToText = (parts: UIMessage['parts']) => {
-  return parts
-    .map((part) => {
-      if (part.type === 'text') {
-        return part.text;
-      }
-
-      return '';
-    })
-    .join('');
-};
 
 const formatMemory = (memory: DB.MemoryItem) => {
   return [
@@ -72,10 +53,7 @@ export const POST = async (req: Request): Promise<Response> => {
           "A search query which will be used to search the user's memories. Use this for broader semantic search terms that capture the intent and context of the conversation.",
         ),
     }),
-    prompt: `
-      Conversation history:
-      ${formatMessageHistory(messages)}
-    `,
+    messages: convertToModelMessages(messages),
   });
 
   console.dir(queryRewriterResult.object, { depth: null });
@@ -173,14 +151,11 @@ export const POST = async (req: Request): Promise<Response> => {
         - Updates: Provide the memory ID and the updated content
         - Deletions: Provide the memory ID of memories that should be removed
 
-        If no memory changes are needed, return empty arrays for all operations.`,
-        prompt: `
-        CONVERSATION HISTORY:
-        ${formatMessageHistory(allMessages)}
-
         EXISTING MEMORIES:
         ${formattedMemories}
-        `,
+
+        If no memory changes are needed, return empty arrays for all operations.`,
+        messages: convertToModelMessages(allMessages),
       });
 
       const { updates, deletions, additions } =

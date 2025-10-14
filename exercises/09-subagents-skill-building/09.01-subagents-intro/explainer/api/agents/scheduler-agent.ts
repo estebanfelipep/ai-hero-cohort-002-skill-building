@@ -9,7 +9,6 @@ import { google } from '@ai-sdk/google';
 import { join } from 'node:path';
 import z from 'zod';
 import { createPersistenceLayer } from '../create-persistence-layer.ts';
-import type { MyMessage } from '../chat.ts';
 import { formatModelMessages } from '../utils.ts';
 
 type CalendarEvent = {
@@ -52,7 +51,7 @@ const formatCalendarEvents = (events: CalendarEvent[]) => {
 };
 
 export const schedulerAgent = async (opts: {
-  prompt: string;
+  messages: ModelMessage[];
 }) => {
   const streamResult = streamText({
     model: google('gemini-2.0-flash'),
@@ -75,7 +74,7 @@ export const schedulerAgent = async (opts: {
       If you need to find an ID for a lesson to update or delete it, use the list events tool.
       This will return a list of events in the calendar, and you can use the ID of the event to update or delete it.
     `,
-    prompt: opts.prompt,
+    messages: opts.messages,
     tools: {
       createEvents: tool({
         description: 'Create a new event in the calendar',

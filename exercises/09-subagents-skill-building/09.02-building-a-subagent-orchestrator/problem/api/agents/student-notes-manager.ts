@@ -1,4 +1,4 @@
-import { stepCountIs, streamText, tool } from 'ai';
+import { stepCountIs, streamText, tool, type ModelMessage } from 'ai';
 
 import { google } from '@ai-sdk/google';
 import { join } from 'node:path';
@@ -42,7 +42,7 @@ const formatStudentNotes = (studentNotes: Student[]) => {
 };
 
 export const studentNotesManagerAgent = async (opts: {
-  prompt: string;
+  messages: ModelMessage[];
 }) => {
   const db = await notesDb.loadDatabase();
 
@@ -61,7 +61,7 @@ export const studentNotesManagerAgent = async (opts: {
 
       ${formatStudentNotes(studentNotesAsArray)}
     `,
-    prompt: opts.prompt,
+    messages: opts.messages,
     tools: {
       appendToStudentNotes: tool({
         description: "Append to a student's notes",

@@ -1,5 +1,6 @@
 import { google } from '@ai-sdk/google';
 import {
+  convertToModelMessages,
   createUIMessageStream,
   createUIMessageStreamResponse,
   streamObject,
@@ -33,41 +34,6 @@ const subagents = {
   'scheduler-agent': schedulerAgent,
 };
 
-const formatMessageHistory = (messages: MyMessage[]) => {
-  return messages
-    .map((message) => {
-      return [
-        message.role === 'user' ? '## User' : '## Assistant',
-        message.parts
-          .map((part) => {
-            if (part.type === 'text') {
-              return part.text;
-            }
-
-            if (part.type === 'data-task') {
-              return [
-                `The ${part.data.subagent} subagent was asked to perform the following task:`,
-                `<task>`,
-                part.data.task,
-                `</task>`,
-                ...(part.data.output
-                  ? [
-                      `The subagent provided the following output:`,
-                      `<output>`,
-                      part.data.output,
-                      `</output>`,
-                    ]
-                  : []),
-              ].join('\n');
-            }
-
-            return '';
-          })
-          .join('\n'),
-      ].join('\n');
-    })
-    .join('\n');
-};
 
 export const POST = async (req: Request): Promise<Response> => {
   const body: { messages: MyMessage[] } = await req.json();
@@ -75,7 +41,6 @@ export const POST = async (req: Request): Promise<Response> => {
 
   const stream = createUIMessageStream<MyMessage>({
     execute: async ({ writer }) => {
-      const formattedMessages = formatMessageHistory(messages);
       let diary = '';
       let step = 0;
 
@@ -115,7 +80,7 @@ export const POST = async (req: Request): Promise<Response> => {
 
           If you are asked about a student, fetch their notes before performing any other tasks.
         `,
-        prompt: formattedMessages,
+        messages: convertToModelMessages(messages),
       });
 
       const reasoningId = crypto.randomUUID();
@@ -181,16 +146,12 @@ export const POST = async (req: Request): Promise<Response> => {
 
             Think step-by-step - first decide what tasks need to be performed,
             then decide which subagent to use for each task.
-          `,
-          prompt: `
-            Initial prompt:
-            
-            ${formattedMessages}
-            
+
             The diary of the work performed so far:
-            
+
             ${diary}
           `,
+          messages: convertToModelMessages(messages),
           schema: z.object({
             tasks: z.array(
               z.object({
@@ -268,7 +229,7 @@ export const POST = async (req: Request): Promise<Response> => {
               let summary = '';
 
               await summarizeAgentOutput({
-                initialPrompt: formattedMessages,
+                initialPrompt: convertToModelMessages(messages),
                 agentOutput: result,
                 onSummaryDelta: (delta) => {
                   summary += delta;
@@ -338,16 +299,12 @@ export const POST = async (req: Request): Promise<Response> => {
           You will be given a diary of the work performed so far and the user's initial prompt.
 
           You should provide a summary of the tasks performed and provide the results to the user.
-        `,
-        prompt: `
-          Initial prompt:
-          
-          ${formattedMessages}
-          
+
           The diary of the work performed so far:
-          
+
           ${diary}
         `,
+        messages: convertToModelMessages(messages),
       });
 
       const textPartId = crypto.randomUUID();

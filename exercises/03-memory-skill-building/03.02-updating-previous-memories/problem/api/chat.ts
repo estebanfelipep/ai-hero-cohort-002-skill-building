@@ -19,25 +19,6 @@ import {
 
 export type MyMessage = UIMessage<unknown, {}>;
 
-const formatMessageHistory = (messages: UIMessage[]) => {
-  return messages
-    .map((message) => {
-      return `${message.role}: ${partsToText(message.parts)}`;
-    })
-    .join('\n');
-};
-
-const partsToText = (parts: UIMessage['parts']) => {
-  return parts
-    .map((part) => {
-      if (part.type === 'text') {
-        return part.text;
-      }
-
-      return '';
-    })
-    .join('');
-};
 
 const formatMemory = (memory: DB.MemoryItem) => {
   return [

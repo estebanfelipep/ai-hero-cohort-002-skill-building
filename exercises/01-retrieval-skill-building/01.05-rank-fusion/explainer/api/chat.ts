@@ -1,5 +1,6 @@
 import { google } from '@ai-sdk/google';
 import {
+  convertToModelMessages,
   createUIMessageStream,
   createUIMessageStreamResponse,
   generateObject,
@@ -39,10 +40,7 @@ export const POST = async (req: Request): Promise<Response> => {
         schema: z.object({
           keywords: z.array(z.string()),
         }),
-        prompt: `
-          Conversation history:
-          ${formatMessageHistory(messages)}
-        `,
+        messages: convertToModelMessages(messages),
       });
 
       console.log(keywords.object.keywords);
@@ -58,6 +56,29 @@ export const POST = async (req: Request): Promise<Response> => {
         topSearchResults.map((result) => result.email.subject),
       );
 
+      const emailSnippets = [
+        '## Email Snippets',
+        ...topSearchResults.map((result, i) => {
+          const from = result.email?.from || 'unknown';
+          const to = result.email?.to || 'unknown';
+          const subject =
+            result.email?.subject || `email-${i + 1}`;
+          const body = result.email?.body || '';
+          const score = result.score;
+
+          return [
+            `### 📧 Email ${i + 1}: [${subject}](#${subject.replace(/[^a-zA-Z0-9]/g, '-')})`,
+            `**From:** ${from}`,
+            `**To:** ${to}`,
+            `**Relevance Score:** ${score.toFixed(3)}`,
+            body,
+            '---',
+          ].join('\n\n');
+        }),
+        '## Instructions',
+        "Based on the emails above, please answer the user's question. Always cite your sources using the email subject in markdown format.",
+      ].join('\n\n');
+
       const answer = streamText({
         model: google('gemini-2.0-flash-001'),
         system: `You are a helpful email assistant that answers questions based on email content.
@@ -65,30 +86,13 @@ export const POST = async (req: Request): Promise<Response> => {
           ALWAYS cite sources using markdown formatting with the email subject as the source.
           Be concise but thorough in your explanations.
         `,
-        prompt: [
-          '## Conversation History',
-          formatMessageHistory(messages),
-          '## Email Snippets',
-          ...topSearchResults.map((result, i) => {
-            const from = result.email?.from || 'unknown';
-            const to = result.email?.to || 'unknown';
-            const subject =
-              result.email?.subject || `email-${i + 1}`;
-            const body = result.email?.body || '';
-            const score = result.score;
-
-            return [
-              `### 📧 Email ${i + 1}: [${subject}](#${subject.replace(/[^a-zA-Z0-9]/g, '-')})`,
-              `**From:** ${from}`,
-              `**To:** ${to}`,
-              `**Relevance Score:** ${score.toFixed(3)}`,
-              body,
-              '---',
-            ].join('\n\n');
-          }),
-          '## Instructions',
-          "Based on the emails above, please answer the user's question. Always cite your sources using the email subject in markdown format.",
-        ].join('\n\n'),
+        messages: [
+          ...convertToModelMessages(messages),
+          {
+            role: 'user',
+            content: emailSnippets,
+          },
+        ],
       });
 
       writer.merge(answer.toUIMessageStream());

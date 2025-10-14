@@ -1,5 +1,6 @@
 import { google } from '@ai-sdk/google';
 import {
+  convertToModelMessages,
   createUIMessageStream,
   createUIMessageStreamResponse,
   streamObject,
@@ -32,39 +33,6 @@ const subagents = {
   'scheduler-agent': schedulerAgent,
 };
 
-const formatMessageHistory = (messages: MyMessage[]) => {
-  return messages
-    .map((message) => {
-      return [
-        message.role === 'user' ? '## User' : '## Assistant',
-        message.parts
-          .map((part) => {
-            if (part.type === 'text') {
-              return part.text;
-            }
-
-            // TODO: The task parts need to be formatted and
-            // passed into the message history. Without this,
-            // no task history will be preserved between runs.
-            // This means that in a situation like this:
-            //
-            // ```
-            // User: Find all of my lessons for tomorrow and pull up all of their notes.
-            // Task Data: I found one lesson with id "123" at 9AM.
-            // Assistant: You have a lesson at 9AM tomorrow.
-            // ```
-            //
-            // The information about the "id" will be lost, and
-            // will need to be re-fetched from the subagent.
-            TODO;
-
-            return '';
-          })
-          .join('\n'),
-      ].join('\n');
-    })
-    .join('\n');
-};
 
 export const POST = async (req: Request): Promise<Response> => {
   const body: { messages: MyMessage[] } = await req.json();
@@ -72,7 +40,6 @@ export const POST = async (req: Request): Promise<Response> => {
 
   const stream = createUIMessageStream<MyMessage>({
     execute: async ({ writer }) => {
-      const formattedMessages = formatMessageHistory(messages);
       // NOTE: We'll be using this to track the number of steps
       // we've taken.
       let step = 0;
@@ -119,11 +86,7 @@ export const POST = async (req: Request): Promise<Response> => {
           // TODO: Pass the diary into the prompt so that the
           // orchestrator can track the work performed so far
           // and plan the next step.
-          prompt: `
-            Initial prompt:
-            
-            ${formattedMessages}
-          `,
+          messages: convertToModelMessages(messages),
           schema: z.object({
             tasks: z.array(
               z.object({
