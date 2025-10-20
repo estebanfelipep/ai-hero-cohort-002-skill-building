@@ -21,6 +21,7 @@
 - Keyword-based search using BM25 algorithm
 - Term frequency & inverse document frequency scoring
 - Document length normalization
+- Interactive playground UI to experiment with different keyword combinations
 - Understanding BM25 limitations: no semantic understanding, requires exact keyword matching
 
 ### [01.03 - Retrieval with BM25](./exercises/01-retrieval-skill-building/01.03-retrieval-with-bm25/problem/readme.md) (Problem)
@@ -46,6 +47,7 @@
 - Merge BM25 + semantic search results
 - Handle different scoring scales between ranking systems
 - Position-based scoring formula: `1/(k+rank)`
+- Interactive playground UI with visual comparison of BM25, semantic, and RRF ordering
 - Leverage complementary strengths of multiple retrieval methods
 
 ### [01.06 - Query Rewriting](./exercises/01-retrieval-skill-building/01.06-query-rewriting/problem/readme.md) (Problem)
