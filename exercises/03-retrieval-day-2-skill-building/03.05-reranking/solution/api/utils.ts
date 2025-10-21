@@ -1,61 +1,101 @@
-import path from 'path';
+import { RecursiveCharacterTextSplitter } from '@langchain/textsplitters';
+import { createHash } from 'crypto';
 import { readFile } from 'fs/promises';
+import path from 'path';
 
-export type Email = {
+export type Chunk = {
   id: string;
-  from: string;
-  to: string;
-  subject: string;
-  body: string;
-  timestamp: string;
-  threadId?: string;
-  inReplyTo?: string;
-  references?: string[];
-  labels?: string[];
-  arcId?: string;
-  phaseId?: number;
+  content: string;
 };
 
-export const loadEmails = async () => {
-  const EMAILS_LOCATION = path.resolve(
+export const loadBookText = async (): Promise<string> => {
+  const BOOK_LOCATION = path.resolve(
     import.meta.dirname,
-    '../../../../../datasets/emails.json',
+    '../../../../../datasets/total-typescript-book.md',
   );
 
-  const content = await readFile(EMAILS_LOCATION, 'utf8');
-  const emails: Email[] = JSON.parse(content);
+  const content = await readFile(BOOK_LOCATION, 'utf8');
+  return content;
+};
 
-  return emails;
+export const createChunks = async (): Promise<Chunk[]> => {
+  const bookText = await loadBookText();
+
+  const splitter = new RecursiveCharacterTextSplitter({
+    chunkSize: 2000,
+    chunkOverlap: 200,
+    separators: [
+      // First, try to split along Markdown headings (starting with level 2)
+      '\n--- CHAPTER ---\n',
+      '\n## ',
+      '\n### ',
+      '\n#### ',
+      '\n##### ',
+      '\n###### ',
+      // Note the alternative syntax for headings (below) is not handled here
+      // Heading level 2
+      // ---------------
+      // End of code block
+      '```\n\n',
+      // Horizontal lines
+      '\n\n***\n\n',
+      '\n\n---\n\n',
+      '\n\n___\n\n',
+      // Note that this splitter doesn't handle horizontal lines defined
+      // by *three or more* of ***, ---, or ___, but this is not handled
+      '\n\n',
+      '\n',
+      ' ',
+      '',
+    ],
+  });
+
+  const chunkTexts = await splitter.splitText(bookText);
+
+  return chunkTexts.map((content) => ({
+    id: hashChunk(content),
+    content,
+  }));
+};
+
+export const hashChunk = (content: string): string => {
+  return createHash('sha256').update(content).digest('hex');
 };
 
 const RRF_K = 60;
 
 export function reciprocalRankFusion(
-  rankings: { email: Email; score: number }[][],
-): { email: Email; score: number }[] {
+  rankings: { chunk: string; score: number }[][],
+): { chunk: string; score: number }[] {
   const rrfScores = new Map<string, number>();
-  const emailMap = new Map<string, Email>();
+  const chunkMap = new Map<
+    string,
+    { chunk: string; score: number }
+  >();
 
   // Process each ranking list
   rankings.forEach((ranking) => {
-    ranking.forEach((result, rank) => {
-      // Get current RRF score for this email
-      const currentScore = rrfScores.get(result.email.id) || 0;
+    ranking.forEach((doc, rank) => {
+      // Get current RRF score for this document
+      const currentScore = rrfScores.get(doc.chunk) || 0;
 
       // Add contribution from this ranking list
       const contribution = 1 / (RRF_K + rank);
-      rrfScores.set(result.email.id, currentScore + contribution);
+      rrfScores.set(doc.chunk, currentScore + contribution);
 
-      // Store email reference
-      emailMap.set(result.email.id, result.email);
+      // Store document reference
+      chunkMap.set(doc.chunk, doc);
     });
   });
 
   // Sort by RRF score (descending)
   return Array.from(rrfScores.entries())
     .sort(([, scoreA], [, scoreB]) => scoreB - scoreA)
-    .map(([emailId, score]) => ({
-      email: emailMap.get(emailId)!,
-      score,
-    }));
+    .map(([chunkContent]) => {
+      const doc = chunkMap.get(chunkContent)!;
+      return {
+        chunk: doc.chunk,
+        score: rrfScores.get(chunkContent)!,
+      };
+    });
 }

@@ -1,43 +1,136 @@
-import { useChat } from '@ai-sdk/react';
+import {
+  QueryClient,
+  QueryClientProvider,
+  useQuery,
+} from '@tanstack/react-query';
 import React, { useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { ChatInput, Message, Wrapper } from './components.tsx';
+import {
+  ChunkCard,
+  Pagination,
+  SearchForm,
+  StatsBar,
+  Wrapper,
+} from './components.tsx';
 import './tailwind.css';
 
-const App = () => {
-  const { messages, sendMessage } = useChat({});
+type RerankStatus = 'approved' | 'rejected' | 'not-passed';
 
-  const [input, setInput] = useState(
-    `What did David say about the mortgage application?`,
-  );
+type ChunksResponse = {
+  chunks: Array<{
+    index: number;
+    content: string;
+    bm25Score: number;
+    embeddingScore: number;
+    rrfScore: number;
+    rerankStatus: RerankStatus;
+  }>;
+  stats: {
+    total: number;
+    avgChars: number;
+    pageCount: number;
+    currentPage: number;
+    minScore: number;
+    maxScore: number;
+  };
+};
 
-  console.log(messages);
+const ChunkViewer = () => {
+  const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
+  const [rerankCount, setRerankCount] = useState(30);
+
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ['chunks', search, page, rerankCount],
+    queryFn: async () => {
+      const params = new URLSearchParams({
+        search,
+        page: page.toString(),
+        rerankCount: rerankCount.toString(),
+      });
+      const res = await fetch(`/api/chunks?${params}`);
+      return (await res.json()) as ChunksResponse;
+    },
+    refetchInterval: 5000,
+  });
+
+  const handleSearchSubmit = (
+    searchValue: string,
+    rerankValue: number,
+  ) => {
+    setSearch(searchValue);
+    setRerankCount(rerankValue);
+    setPage(1);
+    refetch();
+  };
 
   return (
     <Wrapper
-      messages={messages.map((message) => (
-        <Message
-          key={message.id}
-          role={message.role}
-          parts={message.parts}
-        />
-      ))}
-      input={
-        <ChatInput
-          input={input}
-          onChange={(e) => setInput(e.target.value)}
-          onSubmit={(e) => {
-            e.preventDefault();
-            sendMessage({
-              text: input,
-            });
-            setInput('');
-          }}
-        />
+      header={
+        <>
+          <SearchForm
+            searchValue={search}
+            rerankValue={rerankCount}
+            onSubmit={handleSearchSubmit}
+          />
+          {isLoading ? (
+            <div className="flex-shrink-0 border-b border-border bg-background/80 backdrop-blur-sm">
+              <div className="max-w-3xl mx-auto px-4 py-3 flex items-center justify-center">
+                <span className="text-xs text-muted-foreground">
+                  Loading...
+                </span>
+              </div>
+            </div>
+          ) : data ? (
+            <StatsBar
+              total={data.stats.total}
+              avgChars={data.stats.avgChars}
+              currentPage={data.stats.currentPage}
+              pageCount={data.stats.pageCount}
+              minScore={data.stats.minScore * 10}
+              maxScore={data.stats.maxScore * 10}
+            />
+          ) : null}
+        </>
       }
-    />
+      footer={
+        isLoading || !data ? null : (
+          <Pagination
+            currentPage={page}
+            pageCount={data.stats.pageCount}
+            onPageChange={setPage}
+          />
+        )
+      }
+    >
+      {isLoading ? (
+        <div className="flex items-center justify-center py-12 text-muted-foreground">
+          Loading chunks...
+        </div>
+      ) : data ? (
+        data.chunks.map((chunk) => (
+          <ChunkCard
+            key={chunk.index}
+            index={chunk.index}
+            content={chunk.content}
+            bm25Score={chunk.bm25Score}
+            embeddingScore={chunk.embeddingScore}
+            rrfScore={chunk.rrfScore}
+            rerankStatus={chunk.rerankStatus}
+          />
+        ))
+      ) : null}
+    </Wrapper>
   );
 };
 
+const App = () => {
+  return <ChunkViewer />;
+};
+
 const root = createRoot(document.getElementById('root')!);
-root.render(<App />);
+root.render(
+  <QueryClientProvider client={new QueryClient()}>
+    <App />
+  </QueryClientProvider>,
+);
