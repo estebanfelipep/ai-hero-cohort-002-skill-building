@@ -224,7 +224,6 @@ export const SearchForm = ({
                 placeholder="Enter semantic search query..."
                 defaultValue={semanticValue}
                 name="semantic"
-                required
                 className={cn(
                   'w-full rounded-lg border border-input bg-card px-3 py-2 text-sm shadow-sm transition-all',
                   'placeholder:text-muted-foreground',
@@ -243,7 +242,6 @@ export const SearchForm = ({
                 placeholder="Enter keywords separated by spaces..."
                 defaultValue={keywordsValue}
                 name="keywords"
-                required
                 className={cn(
                   'w-full rounded-lg border border-input bg-card px-3 py-2 text-sm shadow-sm transition-all',
                   'placeholder:text-muted-foreground',

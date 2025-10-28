@@ -17,23 +17,25 @@ export type ChunkWithScores = {
 };
 
 export const searchChunks = async (opts: {
-  keywordsForBM25: string[];
-  embeddingsQuery: string;
+  keywordsForBM25?: string[];
+  embeddingsQuery?: string;
   rerankCount?: number;
 }): Promise<ChunkWithScores[]> => {
   const chunks = await createChunks();
   const chunkTexts = chunks.map((c) => c.content);
 
-  const bm25SearchResults = await searchViaBM25(
-    chunkTexts,
-    opts.keywordsForBM25,
-  );
+  const bm25SearchResults =
+    opts.keywordsForBM25 && opts.keywordsForBM25.length > 0
+      ? await searchViaBM25(chunkTexts, opts.keywordsForBM25)
+      : [];
 
   const embeddingsSearchResults =
-    await searchChunksViaEmbeddings(
-      chunks,
-      opts.embeddingsQuery,
-    );
+    opts.embeddingsQuery
+      ? await searchChunksViaEmbeddings(
+          chunks,
+          opts.embeddingsQuery,
+        )
+      : [];
 
   const rrfResults = reciprocalRankFusion([
     embeddingsSearchResults,
@@ -98,7 +100,7 @@ Return the IDs as a simple array of numbers.`,
     }),
     prompt: `
       Search query:
-      ${opts.embeddingsQuery}
+      ${[opts.keywordsForBM25?.join(' '), opts.embeddingsQuery].filter(Boolean).join(' ')}
 
       Available chunks:
       ${topResultsWithId

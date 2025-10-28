@@ -3,8 +3,8 @@ import { searchChunks, type ChunkWithScores } from './search.ts';
 
 export const GET = async (req: Request): Promise<Response> => {
   const url = new URL(req.url);
-  const keywords = url.searchParams.get('keywords') || '';
-  const semantic = url.searchParams.get('semantic') || '';
+  const keywords = url.searchParams.get('keywords') || undefined;
+  const semantic = url.searchParams.get('semantic') || undefined;
   const page = parseInt(url.searchParams.get('page') || '1', 10);
   const pageSize = parseInt(
     url.searchParams.get('pageSize') || '20',
@@ -17,7 +17,9 @@ export const GET = async (req: Request): Promise<Response> => {
   if (keywords || semantic) {
     // Perform search and get sorted results
     chunksWithScores = await searchChunks({
-      keywordsForBM25: keywords.split(' ').map((s) => s.trim()).filter(Boolean),
+      keywordsForBM25: keywords
+        ? keywords.split(' ').map((s) => s.trim()).filter(Boolean)
+        : undefined,
       embeddingsQuery: semantic,
     });
   } else {

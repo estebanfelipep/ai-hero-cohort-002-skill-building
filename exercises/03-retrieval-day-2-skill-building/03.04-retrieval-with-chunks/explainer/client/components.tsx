@@ -212,7 +212,6 @@ export const SearchInput = ({
                 placeholder="Enter semantic search query..."
                 value={semanticValue}
                 onChange={(e) => onSemanticChange(e.target.value)}
-                required
                 className={cn(
                   'w-full rounded-lg border border-input bg-card px-3 py-2 text-sm shadow-sm transition-all',
                   'placeholder:text-muted-foreground',
@@ -231,7 +230,6 @@ export const SearchInput = ({
                 placeholder="Enter keywords separated by spaces..."
                 value={keywordsValue}
                 onChange={(e) => onKeywordsChange(e.target.value)}
-                required
                 className={cn(
                   'w-full rounded-lg border border-input bg-card px-3 py-2 text-sm shadow-sm transition-all',
                   'placeholder:text-muted-foreground',
