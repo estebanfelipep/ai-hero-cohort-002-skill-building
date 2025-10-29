@@ -1,0 +1,200 @@
+commit f500ec235c298e6185ecfa9622f199535b732d70
+Author: Matt Pocock <mattpocockvoice@gmail.com>
+Date:   Wed Oct 22 15:50:29 2025 +0100
+
+    02.02.02 Embeddings Cache
+
+diff --git a/src/app/search.ts b/src/app/search.ts
+index 849f941..5fd168f 100644
+--- a/src/app/search.ts
++++ b/src/app/search.ts
+@@ -1,6 +1,8 @@
+ import BM25 from "okapibm25";
+ import fs from "fs/promises";
+ import path from "path";
++import { embedMany } from "ai";
++import { google } from "@ai-sdk/google";
+ 
+ export interface Email {
+   id: string;
+@@ -36,3 +38,67 @@ export async function loadEmails(): Promise<Email[]> {
+   const fileContent = await fs.readFile(filePath, "utf-8");
+   return JSON.parse(fileContent);
+ }
++
++const CACHE_DIR = path.join(process.cwd(), "data", "embeddings");
++
++const CACHE_KEY = "google-text-embedding-004";
++
++const getEmbeddingFilePath = (id: string) =>
++  path.join(CACHE_DIR, `${CACHE_KEY}-${id}.json`);
++
++export async function loadOrGenerateEmbeddings(
++  emails: Email[]
++): Promise<{ id: string; embedding: number[] }[]> {
++  // Ensure cache directory exists
++  await fs.mkdir(CACHE_DIR, { recursive: true });
++
++  const results: { id: string; embedding: number[] }[] = [];
++  const uncachedEmails: Email[] = [];
++
++  // Check cache for each email
++  for (const email of emails) {
++    try {
++      const cached = await fs.readFile(getEmbeddingFilePath(email.id), "utf-8");
++      const data = JSON.parse(cached);
++      results.push({ id: email.id, embedding: data.embedding });
++    } catch {
++      // Cache miss - need to generate
++      uncachedEmails.push(email);
++    }
++  }
++
++  // Generate embeddings for uncached emails in batches of 99
++  if (uncachedEmails.length > 0) {
++    console.log(`Generating embeddings for ${uncachedEmails.length} emails`);
++
++    const BATCH_SIZE = 99;
++    for (let i = 0; i < uncachedEmails.length; i += BATCH_SIZE) {
++      const batch = uncachedEmails.slice(i, i + BATCH_SIZE);
++      console.log(
++        `Processing batch ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(
++          uncachedEmails.length / BATCH_SIZE
++        )}`
++      );
++
++      const { embeddings } = await embedMany({
++        model: google.textEmbeddingModel("text-embedding-004"),
++        values: batch.map((e) => `${e.subject} ${e.body}`),
++      });
++
++      // Write batch to cache
++      for (let j = 0; j < batch.length; j++) {
++        const email = batch[j];
++        const embedding = embeddings[j];
++
++        await fs.writeFile(
++          getEmbeddingFilePath(email.id),
++          JSON.stringify({ id: email.id, embedding })
++        );
++
++        results.push({ id: email.id, embedding });
++      }
++    }
++  }
++
++  return results;
++}
+diff --git a/src/app/search/page.tsx b/src/app/search/page.tsx
+index b03a004..cbaba67 100644
+--- a/src/app/search/page.tsx
++++ b/src/app/search/page.tsx
+@@ -6,99 +6,107 @@ import { EmailList } from "./email-list";
+ import { PerPageSelector } from "./per-page-selector";
+ import { SearchInput } from "./search-input";
+ import { SearchPagination } from "./search-pagination";
+-import { loadEmails, searchWithBM25 } from "../search";
++import {
++  loadEmails,
++  loadOrGenerateEmbeddings,
++  searchWithBM25,
++} from "../search";
+ 
+ export default async function SearchPage(props: {
+   searchParams: Promise<{ q?: string; page?: string; perPage?: string }>;
+ }) {
+   const searchParams = await props.searchParams;
+   const query = searchParams.q || "";
+   const page = Number(searchParams.page) || 1;
+   const perPage = Number(searchParams.perPage) || 10;
+ 
+   const allEmails = await loadEmails();
+ 
++  const embeddings = await loadOrGenerateEmbeddings(allEmails);
++
++  console.log("Email embeddings loaded:", embeddings.length);
++
+   const emailsWithScores = await searchWithBM25(
+     query.toLowerCase().split(" "),
+     allEmails
+   );
+ 
+   // Transform emails to match the expected format
+   const transformedEmails = emailsWithScores
+     .map(({ email, score }) => ({
+       id: email.id,
+       from: email.from,
+       subject: email.subject,
+       preview: email.body.substring(0, 100) + "...",
+       content: email.body,
+       date: email.timestamp,
+       score: score,
+     }))
+     .sort((a, b) => b.score - a.score);
+ 
+   // Filter emails based on search query
+   const filteredEmails = query
+     ? transformedEmails.filter((email) => email.score > 0)
+     : transformedEmails;
+ 
+   const totalPages = Math.ceil(filteredEmails.length / perPage);
+   const startIndex = (page - 1) * perPage;
+   const paginatedEmails = filteredEmails.slice(
+     startIndex,
+     startIndex + perPage
+   );
+   const allChats = await loadChats();
+   const chats = allChats.slice(0, CHAT_LIMIT);
+   const memories = await loadMemories();
+ 
+   return (
+     <>
+       <SideBar chats={chats} memories={memories} chatIdFromSearchParams={""} />
+       <div className="h-screen flex flex-col w-full">
+         <TopBar showSidebar={true} title="Data" />
+         <div className="flex-1">
+           <div className="max-w-4xl mx-auto xl:px-2 px-6 py-6">
+             <div className="mb-6">
+               <p className="text-sm text-muted-foreground">
+                 Search through your email archive
+               </p>
+             </div>
+ 
+             <div className="flex md:items-center md:justify-between gap-4 flex-col md:flex-row">
+               <SearchInput initialQuery={query} currentPerPage={perPage} />
+               <PerPageSelector currentPerPage={perPage} query={query} />
+             </div>
+ 
+             <div className="mt-6">
+               <div className="flex items-center justify-between mb-3">
+                 <p className="text-sm text-muted-foreground">
+                   {query ? (
+                     <>
+                       Found {filteredEmails.length} result
+                       {filteredEmails.length !== 1 ? "s" : ""} for &ldquo;
+                       {query}
+                       &rdquo;
+                     </>
+                   ) : (
+                     <>Found {filteredEmails.length} emails</>
+                   )}
+                 </p>
+               </div>
+               <EmailList emails={paginatedEmails} />
+               {totalPages > 1 && (
+                 <div className="mt-6">
+                   <SearchPagination
+                     currentPage={page}
+                     totalPages={totalPages}
+                     query={query}
+                     perPage={perPage}
+                   />
+                 </div>
+               )}
+             </div>
+           </div>
+         </div>
+       </div>
+     </>
+   );
+ }

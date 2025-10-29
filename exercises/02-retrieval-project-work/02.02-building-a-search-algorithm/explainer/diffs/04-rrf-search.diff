@@ -1,0 +1,160 @@
+commit fc7cd8726a20c150dae8f6d646ad4383974f07cf
+Author: Matt Pocock <mattpocockvoice@gmail.com>
+Date:   Wed Oct 22 16:16:14 2025 +0100
+
+    02.02.04 RRF Search
+
+diff --git a/src/app/search.ts b/src/app/search.ts
+index fc7f4ec..9471e89 100644
+--- a/src/app/search.ts
++++ b/src/app/search.ts
+@@ -125,3 +125,43 @@ export async function searchWithEmbeddings(query: string, emails: Email[]) {
+   // Sort by similarity descending
+   return results.sort((a, b) => b.score - a.score);
+ }
++
++const RRF_K = 60;
++
++export function reciprocalRankFusion(
++  rankings: { email: Email; score: number }[][]
++): { email: Email; score: number }[] {
++  const rrfScores = new Map<string, number>();
++  const emailMap = new Map<string, Email>();
++
++  // Process each ranking list (BM25 and embeddings)
++  rankings.forEach((ranking) => {
++    ranking.forEach((item, rank) => {
++      const currentScore = rrfScores.get(item.email.id) || 0;
++
++      // Position-based scoring: 1/(k+rank)
++      const contribution = 1 / (RRF_K + rank);
++      rrfScores.set(item.email.id, currentScore + contribution);
++
++      emailMap.set(item.email.id, item.email);
++    });
++  });
++
++  // Sort by combined RRF score descending
++  return Array.from(rrfScores.entries())
++    .sort(([, scoreA], [, scoreB]) => scoreB - scoreA)
++    .map(([emailId, score]) => ({
++      score,
++      email: emailMap.get(emailId)!,
++    }));
++}
++
++export const searchWithRRF = async (query: string, emails: Email[]) => {
++  const bm25Ranking = await searchWithBM25(
++    query.toLowerCase().split(" "),
++    emails
++  );
++  const embeddingsRanking = await searchWithEmbeddings(query, emails);
++  const rrfRanking = reciprocalRankFusion([bm25Ranking, embeddingsRanking]);
++  return rrfRanking;
++};
+diff --git a/src/app/search/page.tsx b/src/app/search/page.tsx
+index fe2488a..89c3e09 100644
+--- a/src/app/search/page.tsx
++++ b/src/app/search/page.tsx
+@@ -2,7 +2,7 @@ import { SideBar } from "@/components/side-bar";
+ import { TopBar } from "@/components/top-bar";
+ import { loadChats, loadMemories } from "@/lib/persistence-layer";
+ import { CHAT_LIMIT } from "../page";
+-import { loadEmails, searchWithEmbeddings } from "../search";
++import { loadEmails, searchWithEmbeddings, searchWithRRF } from "../search";
+ import { EmailList } from "./email-list";
+ import { PerPageSelector } from "./per-page-selector";
+ import { SearchInput } from "./search-input";
+@@ -11,91 +11,91 @@ import { SearchPagination } from "./search-pagination";
+ export default async function SearchPage(props: {
+   searchParams: Promise<{ q?: string; page?: string; perPage?: string }>;
+ }) {
+   const searchParams = await props.searchParams;
+   const query = searchParams.q || "";
+   const page = Number(searchParams.page) || 1;
+   const perPage = Number(searchParams.perPage) || 10;
+ 
+   const allEmails = await loadEmails();
+ 
+-  const emailsWithScores = await searchWithEmbeddings(query, allEmails);
++  const emailsWithScores = await searchWithRRF(query, allEmails);
+ 
+   // Transform emails to match the expected format
+   const transformedEmails = emailsWithScores
+     .map(({ email, score }) => ({
+       id: email.id,
+       from: email.from,
+       subject: email.subject,
+       preview: email.body.substring(0, 100) + "...",
+       content: email.body,
+       date: email.timestamp,
+       score: score,
+     }))
+     .sort((a, b) => b.score - a.score);
+ 
+   // Filter emails based on search query
+   const filteredEmails = query
+     ? transformedEmails.filter((email) => email.score > 0)
+     : transformedEmails;
+ 
+   const totalPages = Math.ceil(filteredEmails.length / perPage);
+   const startIndex = (page - 1) * perPage;
+   const paginatedEmails = filteredEmails.slice(
+     startIndex,
+     startIndex + perPage
+   );
+   const allChats = await loadChats();
+   const chats = allChats.slice(0, CHAT_LIMIT);
+   const memories = await loadMemories();
+ 
+   return (
+     <>
+       <SideBar chats={chats} memories={memories} chatIdFromSearchParams={""} />
+       <div className="h-screen flex flex-col w-full">
+         <TopBar showSidebar={true} title="Data" />
+         <div className="flex-1">
+           <div className="max-w-4xl mx-auto xl:px-2 px-6 py-6">
+             <div className="mb-6">
+               <p className="text-sm text-muted-foreground">
+                 Search through your email archive
+               </p>
+             </div>
+ 
+             <div className="flex md:items-center md:justify-between gap-4 flex-col md:flex-row">
+               <SearchInput initialQuery={query} currentPerPage={perPage} />
+               <PerPageSelector currentPerPage={perPage} query={query} />
+             </div>
+ 
+             <div className="mt-6">
+               <div className="flex items-center justify-between mb-3">
+                 <p className="text-sm text-muted-foreground">
+                   {query ? (
+                     <>
+                       Found {filteredEmails.length} result
+                       {filteredEmails.length !== 1 ? "s" : ""} for &ldquo;
+                       {query}
+                       &rdquo;
+                     </>
+                   ) : (
+                     <>Found {filteredEmails.length} emails</>
+                   )}
+                 </p>
+               </div>
+               <EmailList emails={paginatedEmails} />
+               {totalPages > 1 && (
+                 <div className="mt-6">
+                   <SearchPagination
+                     currentPage={page}
+                     totalPages={totalPages}
+                     query={query}
+                     perPage={perPage}
+                   />
+                 </div>
+               )}
+             </div>
+           </div>
+         </div>
+       </div>
+     </>
+   );
+ }

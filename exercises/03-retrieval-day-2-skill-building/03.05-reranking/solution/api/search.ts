@@ -5,7 +5,10 @@ import { searchViaBM25 } from './bm25.ts';
 import { searchChunksViaEmbeddings } from './embeddings.ts';
 import { createChunks, reciprocalRankFusion } from './utils.ts';
 
-export type RerankStatus = 'approved' | 'rejected' | 'not-passed';
+export type RerankStatus =
+  | 'approved'
+  | 'rejected'
+  | 'not-passed';
 
 export type ChunkWithScores = {
   chunk: string;
@@ -29,13 +32,12 @@ export const searchChunks = async (opts: {
       ? await searchViaBM25(chunkTexts, opts.keywordsForBM25)
       : [];
 
-  const embeddingsSearchResults =
-    opts.embeddingsQuery
-      ? await searchChunksViaEmbeddings(
-          chunks,
-          opts.embeddingsQuery,
-        )
-      : [];
+  const embeddingsSearchResults = opts.embeddingsQuery
+    ? await searchChunksViaEmbeddings(
+        chunks,
+        opts.embeddingsQuery,
+      )
+    : [];
 
   const rrfResults = reciprocalRankFusion([
     embeddingsSearchResults,
@@ -81,7 +83,7 @@ export const searchChunks = async (opts: {
 
   // Call reranker LLM
   const rerankedResults = await generateObject({
-    model: google('gemini-2.0-flash-001'),
+    model: google('gemini-2.5-flash-lite'),
     system: `You are a search result reranker. Your job is to analyze a list of chunks from a TypeScript book and return only the IDs of the most relevant chunks for answering the user's question.
 
 Given a list of chunks with their IDs and content, you should:
@@ -94,9 +96,7 @@ Return the IDs as a simple array of numbers.`,
     schema: z.object({
       resultIds: z
         .array(z.number())
-        .describe(
-          'Array of IDs for the most relevant chunks',
-        ),
+        .describe('Array of IDs for the most relevant chunks'),
     }),
     prompt: `
       Search query:
@@ -166,14 +166,20 @@ Return the IDs as a simple array of numbers.`,
   // 3. Not-passed chunks (sorted by RRF score)
   return chunksWithStatus.sort((a, b) => {
     // Approved chunks come first, sorted by rerank order
-    if (a.rerankStatus === 'approved' && b.rerankStatus === 'approved') {
+    if (
+      a.rerankStatus === 'approved' &&
+      b.rerankStatus === 'approved'
+    ) {
       return (a.rerankOrder ?? 0) - (b.rerankOrder ?? 0);
     }
     if (a.rerankStatus === 'approved') return -1;
     if (b.rerankStatus === 'approved') return 1;
 
     // Rejected chunks come next, sorted by RRF score
-    if (a.rerankStatus === 'rejected' && b.rerankStatus === 'rejected') {
+    if (
+      a.rerankStatus === 'rejected' &&
+      b.rerankStatus === 'rejected'
+    ) {
       return b.rrfScore - a.rrfScore;
     }
     if (a.rerankStatus === 'rejected') return -1;

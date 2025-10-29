@@ -102,7 +102,8 @@ export const searchChunks = async (opts: {
   // TODO: Call generateObject to generate an array of IDs
   // of the most relevant chunks, based on the user's search query.
   // You should tell the LLM to return only the IDs, not the full chunks.
-  // You should also tell the LLM to be selective and only include chunks that are genuinely helpful for answering the question.
+  // You should also tell the LLM to be selective and only include chunks
+  // that are genuinely helpful for answering the question.
   // If a chunk is only tangentially related or not relevant,
   // exclude its ID.
   const rerankedResults = TODO;

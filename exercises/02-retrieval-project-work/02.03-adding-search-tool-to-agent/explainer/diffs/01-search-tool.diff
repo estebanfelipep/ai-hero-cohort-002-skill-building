@@ -1,0 +1,215 @@
+commit 8105cabde9562806be787b899076d15d8eb958e0
+Author: Matt Pocock <mattpocockvoice@gmail.com>
+Date:   Thu Oct 23 12:26:31 2025 +0100
+
+    02.03.01 Search Tool
+
+diff --git a/src/app/api/chat/route.ts b/src/app/api/chat/route.ts
+index 75c51cd..915f8c1 100644
+--- a/src/app/api/chat/route.ts
++++ b/src/app/api/chat/route.ts
+@@ -9,12 +9,14 @@ import { google } from "@ai-sdk/google";
+ import {
+   convertToModelMessages,
+   createUIMessageStream,
+   createUIMessageStreamResponse,
+   safeValidateUIMessages,
++  stepCountIs,
+   streamText,
+   UIMessage,
+ } from "ai";
+ import { generateTitleForChat } from "./generate-title";
++import { searchTool } from "./search-tool";
+ 
+ // Allow streaming responses up to 30 seconds
+ export const maxDuration = 30;
+@@ -29,89 +31,96 @@ export type MyMessage = UIMessage<
+ export async function POST(req: Request) {
+   const body: {
+     messages: UIMessage[];
+     id: string;
+   } = await req.json();
+ 
+   const chatId = body.id;
+ 
+   const validatedMessagesResult = await safeValidateUIMessages<MyMessage>({
+     messages: body.messages,
+   });
+ 
+   if (!validatedMessagesResult.success) {
+     return new Response(validatedMessagesResult.error.message, { status: 400 });
+   }
+ 
+   const messages = validatedMessagesResult.data;
+ 
+   let chat = await getChat(chatId);
+   const mostRecentMessage = messages[messages.length - 1];
+ 
+   if (!mostRecentMessage) {
+     return new Response("No messages provided", { status: 400 });
+   }
+ 
+   if (mostRecentMessage.role !== "user") {
+     return new Response("Last message must be from the user", {
+       status: 400,
+     });
+   }
+ 
+   const stream = createUIMessageStream<MyMessage>({
+     execute: async ({ writer }) => {
+       let generateTitlePromise: Promise<void> | undefined = undefined;
+ 
+       if (!chat) {
+         const newChat = await createChat({
+           id: chatId,
+           title: "Generating title...",
+           initialMessages: messages,
+         });
+         chat = newChat;
+ 
+         writer.write({
+           type: "data-frontend-action",
+           data: "refresh-sidebar",
+           transient: true,
+         });
+ 
+         generateTitlePromise = generateTitleForChat(messages)
+           .then((title) => {
+             return updateChatTitle(chatId, title);
+           })
+           .then(() => {
+             writer.write({
+               type: "data-frontend-action",
+               data: "refresh-sidebar",
+               transient: true,
+             });
+           });
+       } else {
+         await appendToChatMessages(chatId, [mostRecentMessage]);
+       }
+ 
+       const result = streamText({
+-        model: google("gemini-2.5-flash-lite"),
++        model: google("gemini-2.5-flash"),
+         messages: convertToModelMessages(messages),
++        system: `
++          Use your search tool to answer questions.
++        `,
++        tools: {
++          search: searchTool,
++        },
++        stopWhen: [stepCountIs(10)],
+       });
+ 
+       writer.merge(
+         result.toUIMessageStream({
+           sendSources: true,
+           sendReasoning: true,
+         })
+       );
+ 
+       await generateTitlePromise;
+     },
+     generateId: () => crypto.randomUUID(),
+     onFinish: async ({ responseMessage }) => {
+       await appendToChatMessages(chatId, [responseMessage]);
+     },
+   });
+ 
+   // send sources and reasoning back to the client
+   return createUIMessageStreamResponse({
+     stream,
+   });
+ }
+diff --git a/src/app/api/chat/search-tool.ts b/src/app/api/chat/search-tool.ts
+new file mode 100644
+index 0000000..7bad93c
+--- /dev/null
++++ b/src/app/api/chat/search-tool.ts
+@@ -0,0 +1,59 @@
++import {
++  loadEmails,
++  reciprocalRankFusion,
++  searchWithBM25,
++  searchWithEmbeddings,
++} from "@/app/search";
++import { tool } from "ai";
++import { z } from "zod";
++
++export const searchTool = tool({
++  description:
++    "Search emails using both keyword and semantic search. Returns most relevant emails ranked by reciprocal rank fusion.",
++  inputSchema: z.object({
++    keywords: z
++      .array(z.string())
++      .describe(
++        "Exact keywords for BM25 search (names, amounts, specific terms)"
++      )
++      .optional(),
++    searchQuery: z
++      .string()
++      .describe("Natural language query for semantic search (broader concepts)")
++      .optional(),
++  }),
++  execute: async ({ keywords, searchQuery }) => {
++    console.log("Keywords:", keywords);
++    console.log("Search query:", searchQuery);
++
++    const emails = await loadEmails();
++
++    // Use search algorithm from lesson 2.2
++    const bm25Results = keywords ? await searchWithBM25(keywords, emails) : [];
++    const embeddingResults = searchQuery
++      ? await searchWithEmbeddings(searchQuery, emails)
++      : [];
++    const rrfResults = reciprocalRankFusion([
++      bm25Results.slice(0, 30), // Only take the top 30 results from each search
++      embeddingResults.slice(0, 30), // Only take the top 30 results from each search
++    ]);
++
++    // Return top 10 full email objects
++    const topEmails = rrfResults
++      .slice(0, 10)
++      .filter((r) => r.score > 0) // Only return emails with a score greater than 0
++      .map((r) => ({
++        id: r.email.id,
++        from: r.email.from,
++        to: r.email.to,
++        subject: r.email.subject,
++        body: r.email.body,
++        timestamp: r.email.timestamp,
++        score: r.score,
++      }));
++
++    return {
++      emails: topEmails,
++    };
++  },
++});
+diff --git a/src/app/search.ts b/src/app/search.ts
+index 9471e89..02ee7a3 100644
+--- a/src/app/search.ts
++++ b/src/app/search.ts
+@@ -106,22 +106,20 @@ export async function loadOrGenerateEmbeddings(
+ export async function searchWithEmbeddings(query: string, emails: Email[]) {
+   // Load cached embeddings
+   const emailEmbeddings = await loadOrGenerateEmbeddings(emails);
+ 
+   // Generate query embedding
+   const { embedding: queryEmbedding } = await embed({
+     model: google.textEmbeddingModel("text-embedding-004"),
+     value: query,
+   });
+ 
+   // Calculate similarity scores
+   const results = emailEmbeddings.map(({ id, embedding }) => {
+     const email = emails.find((e) => e.id === id)!;
+     const score = cosineSimilarity(queryEmbedding, embedding);
+     return { score, email };
+   });
+ 
+-  console.log("Results:", results.length);
+-
+   // Sort by similarity descending
+   return results.sort((a, b) => b.score - a.score);
+ }
