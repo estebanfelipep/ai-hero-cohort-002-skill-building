@@ -19,7 +19,6 @@ import {
 
 export type MyMessage = UIMessage<unknown, {}>;
 
-
 const formatMemory = (memory: DB.MemoryItem) => {
   return [
     `Memory: ${memory.memory}`,
@@ -98,14 +97,12 @@ export const POST = async (req: Request): Promise<Response> => {
 
         Extract any new permanent memories from this conversation. Return an array of memory strings that should be added to the user's permanent memory. Each memory should be a concise, factual statement about the user.
 
-        If no new permanent memories are found, return an empty array.`,
-        prompt: `
-        CONVERSATION HISTORY:
-        ${formatMessageHistory(allMessages)}
-
+        If no new permanent memories are found, return an empty array.
+        
         EXISTING MEMORIES:
         ${memoriesText}
         `,
+        messages: convertToModelMessages(allMessages),
       });
 
       const { updates, deletions, additions } =
