@@ -17,7 +17,6 @@ import {
 
 export type MyMessage = UIMessage<unknown, {}>;
 
-
 const formatMemory = (memory: DB.MemoryItem) => {
   return [
     `Memory: ${memory.memory}`,
