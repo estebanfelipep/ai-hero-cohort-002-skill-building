@@ -57,15 +57,17 @@ export const POST = async (req: Request): Promise<Response> => {
 
   console.dir(queryRewriterResult.object, { depth: null });
 
-  const allMemories = await searchMemories({
+  const foundMemories = await searchMemories({
     searchQuery: queryRewriterResult.object.searchQuery,
     keywordsForBM25: queryRewriterResult.object.keywords,
   });
 
-  const formattedMemories = allMemories
-    .slice(0, 10)
+  const formattedMemories = foundMemories
+    .slice(0, 4)
     .map((memory) => formatMemory(memory.memory))
     .join('\n\n');
+
+  console.log('Formatted Memories:\n', formattedMemories);
 
   const stream = createUIMessageStream<MyMessage>({
     execute: async ({ writer }) => {
