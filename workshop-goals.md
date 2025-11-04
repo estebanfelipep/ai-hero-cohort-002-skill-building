@@ -246,50 +246,43 @@
 
 **Learning Goals:**
 
-- Implement memory loading and formatting for LLM consumption
-- Compare approaches: tool-controlled vs automatic vs user-confirmed creation
-- Understand tradeoffs: transparency, latency, cost, user control
-- Build production memory system integrated with chat interface
+- Scale memory systems with semantic recall instead of loading entire DB
+- Handle infinite message threads with working memory via message embeddings
+- Learn from previous conversations with episodic memory and outcome tracking
+- Build production memory system with cross-conversation context
 
-### [06.01 - All Memories Upfront](./exercises/06-memory-project-work/06.01-all-memories-upfront/explainer/notes.md) (Explainer)
+### [06.01 - Semantic Recall on Memories](./exercises/06-memory-project-work/06.01-semantic-recall-on-memories/explainer/notes.md) (Explainer)
 
-- Load entire memory DB via `loadMemories()` from persistence layer
-- Format memories as text for LLM consumption
-- Inject all memories into system prompt for full context
-- Simplest approach: no retrieval, no filtering - all context every request
-- Manual memory creation via existing UI (no automatic extraction yet)
-- Understand limitations: doesn't scale, wastes tokens on irrelevant memories
-- Foundation before adding tool-controlled creation and semantic recall
+- Automatic memory creation via `onFinish` callback with `generateObject`
+- Extract permanent memories (create/update/delete operations) from conversation
+- Embed memories at creation time using `embedMemory()` function
+- Query rewriting: generate keywords + search query from conversation context
+- Retrieve top N most relevant memories via BM25 + embeddings + RRF
+- Format and inject retrieved memories into system prompt (not entire DB)
+- Scale memory system beyond loading all memories every request
+- Foundation for working memory (6.2) and episodic memory (6.3)
 
-### [06.02 - Tool Call Memory Creation](./exercises/06-memory-project-work/06.02-tool-call-memory-creation/explainer/notes.md) (Explainer)
+### [06.02 - Working Memory via Message Embeddings](./exercises/06-memory-project-work/06.02-working-memory-via-message-embeddings/explainer/notes.md) (Explainer)
 
-- Define `createMemory`, `updateMemory`, `deleteMemory` tools with CRUD parameters
-- LLM controls timing: calls tools when user shares/updates personal info
-- Execute handlers call persistence layer functions
-- System prompt guides LLM judgment: permanent vs situational info
-- Real-time memory operations during conversation
-- Transparent approach: tool calls visible in UI
-- Agent decides when to remember, immediate save without user confirmation
+- Handle infinite message threads by embedding each message at creation
+- Store embeddings alongside messages in chat persistence layer
+- Sliding window: Last 10 messages passed directly to LLM for recent context
+- Automatic semantic recall: Query rewriter runs on every request
+- Retrieve relevant messages beyond sliding window via embeddings search
+- Format recalled messages as "Earlier in conversation:" context
+- Per-thread scope: working memory cleared when chat ends
+- Token efficiency: Avoid loading entire chat history into context window
 
-### [06.03 - Automatic Memory Creation](./exercises/06-memory-project-work/06.03-automatic-memory-creation/explainer/notes.md) (Explainer)
+### [06.03 - Episodic Memory from Conversations](./exercises/06-memory-project-work/06.03-episodic-memory-from-conversations/explainer/notes.md) (Explainer)
 
-- Automatic extraction via `onFinish` callback after each response
-- Use `generateObject` to analyze full conversation for memory operations
-- Define Zod schema for updates (id + title + content), deletions (IDs), additions (title + content)
-- System prompt guides permanent vs situational judgment
-- Filter deletions to avoid conflicts with updates
-- Comprehensive approach: analyzes every message automatically
-- Trade-offs: less transparent, extra LLM call per message, higher latency/cost vs tool approach
-
-### [06.04 - User Confirmed Memories](./exercises/06-memory-project-work/06.04-user-confirmed-memories/explainer/notes.md) (Explainer)
-
-- LLM suggests memory operations (create/update/delete) via `generateObject` in `onFinish`
-- Send suggestions as transient data part (`data-memory-suggestions`) for ephemeral approval flow
-- Frontend detects suggestions via `onData` callback, displays alert notification
-- Build approval modal UI showing each suggested operation with approve/reject buttons
-- Execute only user-approved operations via server action calling persistence layer
-- Maximum user control approach: nothing saved without explicit approval
-- Trade-offs: most complex implementation, user friction vs transparency and trust
+- Cross-conversation learning: remember and learn from previous chats
+- Auto-extract via `onFinish`: Summarize conversation with learnings/outcomes
+- Schema includes: summary, whatWorked, whatDidntWork, chat ID, timestamp, embedding
+- Store in separate `episodicMemory.json` collection
+- Build `recallConversations` tool: semantic search across episodic memories
+- Tool returns both episodic summary AND full chat messages from matched conversations
+- Agent can ask: "What have you told me recently about X?" or "What approaches failed before?"
+- Outcome tracking: LLM learns what worked and avoids repeating mistakes
 
 ## Section 07: Evals Skill Building
 
