@@ -10,31 +10,31 @@ evalite('Agent Tool Call Evaluation', {
       input: createUIMessageFixture(
         'What is the weather in San Francisco right now?',
       ),
-      expected: { tool: 'checkWeather' },
+      // TODO: Add expected tool call
     },
     {
       input: createUIMessageFixture(
         'Create a spreadsheet called "Q4 Sales" with columns for Date, Product, and Revenue',
       ),
-      expected: { tool: 'createSpreadsheet' },
+      // TODO: Add expected tool call
     },
     {
       input: createUIMessageFixture(
         'Send an email to john@example.com with subject "Meeting Tomorrow" and body "Don\'t forget our 2pm meeting"',
       ),
-      expected: { tool: 'sendEmail' },
+      // TODO: Add expected tool call
     },
     {
       input: createUIMessageFixture(
         'Translate "Hello world" to Spanish',
       ),
-      expected: { tool: 'translateText' },
+      // TODO: Add expected tool call
     },
     {
       input: createUIMessageFixture(
         'Set a reminder for tomorrow at 9am to call the dentist',
       ),
-      expected: { tool: 'setReminder' },
+      // TODO: Add expected tool call
     },
   ],
   task: async (messages) => {
