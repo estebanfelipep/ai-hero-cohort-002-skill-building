@@ -2,32 +2,29 @@ import { stepCountIs, type UIMessage } from 'ai';
 import { evalite } from 'evalite';
 import { runAgent } from './agent.ts';
 import { google } from '@ai-sdk/google';
+import { createUIMessageFixture } from '#shared/create-ui-message-fixture.ts';
 
 evalite('Agent Tool Call Evaluation', {
   data: [
     {
-      input: ['What is the weather in San Francisco right now?'],
+      input: createUIMessageFixture(
+        'What is the weather in San Francisco right now?',
+      ),
     },
     {
-      input: [
+      input: createUIMessageFixture(
         'Create a spreadsheet called "Q4 Sales" with columns for Date, Product, and Revenue',
-      ],
+      ),
     },
     {
-      input: [
-        'Send an email to john@example.com with subject "Meeting Tomorrow" and body "Don\'t forget our 2pm meeting"',
-      ],
+      input: createUIMessageFixture(
+        'Send an email to john@example.com with subject "Meeting Tomorrow".',
+        'What should the email say?',
+        "Don't forget our 2pm meeting",
+      ),
     },
   ],
-  task: async (input) => {
-    const messages: UIMessage[] = input.map(
-      (message, index) => ({
-        id: String(index + 1),
-        role: index % 2 === 0 ? 'user' : 'assistant',
-        parts: [{ type: 'text', text: message }],
-      }),
-    );
-
+  task: async (messages) => {
     const result = runAgent(
       google('gemini-2.0-flash'),
       messages,
