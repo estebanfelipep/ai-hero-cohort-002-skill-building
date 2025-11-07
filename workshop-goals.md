@@ -289,28 +289,64 @@
 **Learning Goals:**
 
 - Test agent behavior systematically with Evalite framework
-- Verify tool invocation and parameter correctness
-- Generate synthetic test datasets using LLMs
-- Scale testing beyond manual test cases
+- Build deterministic scorers for tool call validation
+- Compare models and approaches with evalite.each
+- Expand test coverage with adversarial inputs
+- Implement clarifying questions tool with LLM-as-judge scoring
+- Scale agent testing beyond manual verification
 
-### [07.01 - Evaluating Tool Call Agents](./exercises/07-evals-skill-building/07.01-evaluating-tool-call-agents/problem/readme.md) (Problem)
+### [07.01 - Evaluating Tool Call Agents](./exercises/07-evals-skill-building/07.01-evaluating-tool-call-agents/problem/readme.md) (Explainer)
 
-- Test LLM tool calling with Evalite framework
-- Fake tools: getWeather and calculator for testing
-- Inspect `toolCalls` array to verify expected tool invocation
-- Test positive cases (tool needed) and negative cases (no tool needed)
-- Binary scoring pattern: 1 correct, 0 wrong
-- Extend to validate tool parameters
+- Setup Evalite framework for agent with 20+ tools
+- Basic eval structure for monitoring tool call behavior
+- Inspect `toolCalls` array in streamText results
 - Foundation for systematic agent testing
+- Multi-tool agent testing patterns
 
-### [07.02 - Creating Synthetic Datasets](./exercises/07-evals-skill-building/07.02-creating-synthetic-datasets/problem/readme.md) (Problem)
+### [07.02 - Deterministic Tool Call Scorer](./exercises/07-evals-skill-building/07.02-deterministic-tool-call-scorer/explainer/readme.md) (Explainer)
 
-- Generate realistic evaluation datasets using LLMs to scale testing
-- Use `generateText` for simple output (persona descriptions)
-- Use `generateObject` for structured data (conversation turns)
-- Create 4 scenario types: happy path, situational only, edge case mixed, adversarial privacy
-- Prompt engineering for diverse, realistic synthetic data generation
-- Output 12 conversations (3 per scenario) to test memory extraction systems
+- Build scorers to verify correct tool invocation
+- Validate tool call parameters match expectations
+- Test positive cases (tool should be called) and negative cases (no tool needed)
+- Binary scoring pattern: 1 correct, 0 wrong
+- Handle multiple tool calls in single response
+- Catch tool selection errors systematically
+
+### [07.03 - Evalite.each for A/B Testing](./exercises/07-evals-skill-building/07.03-evalite-each-ab-testing/explainer/readme.md) (Explainer)
+
+- Use evalite.each API to compare variations
+- Test multiple models (GPT-4, Claude, Gemini) on same inputs
+- Compare different prompt approaches side-by-side
+- A/B test system prompts or tool descriptions
+- Aggregate scores across model variations
+- Identify which configurations perform best
+
+### [07.04 - Adversarial Inputs](./exercises/07-evals-skill-building/07.04-adversarial-inputs/explainer/readme.md) (Explainer)
+
+- Expand test dataset with edge cases
+- Ambiguous requests requiring tool choice
+- Missing required information scenarios
+- Overlapping tool functionality tests
+- User requests with conflicting constraints
+- Build robust agent behavior under uncertainty
+
+### [07.05 - Clarifying Questions Tool](./exercises/07-evals-skill-building/07.05-clarifying-questions-tool/explainer/readme.md) (Explainer)
+
+- Add `askClarifyingQuestions` tool to agent
+- Verify tool called when info missing (not proceeding with guesses)
+- Test: ask questions vs incorrectly calling action tools
+- Deterministic scorer: correct tool invocation when ambiguous
+- Handle scenarios requiring user input before action
+- Balance helpfulness vs over-questioning
+
+### [07.06 - LLM Judge for Question Quality](./exercises/07-evals-skill-building/07.06-llm-judge-question-quality/explainer/readme.md) (Explainer)
+
+- Build LLM-as-judge scorer for clarifying questions
+- Validate questions are relevant and helpful
+- Multiple-choice verdict format for consistency
+- Request reasoning before scoring for transparency
+- Evaluate question specificity and actionability
+- Catch irrelevant or poorly-formed questions
 
 ## Section 08: Evals Project Work
 
