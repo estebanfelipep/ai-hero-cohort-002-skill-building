@@ -11,16 +11,21 @@ import { z } from 'zod';
 
 const tools = {
   // TODO: Implement the askForClarification tool
-  // This tool should be called when the agent needs more information from the user
-  // to complete a request. For example, if the user says "Book a flight to Paris"
-  // but doesn't specify dates, origin, or passengers, the agent should call this
+  // This tool should be called when the agent needs more
+  // information from the user to complete a request. For
+  // example, if the user says "Book a flight to Paris" but
+  // doesn't specify dates, origin, or passengers, the
+  // agent should call this but doesn't specify dates,
+  // origin, or passengers, the agent should call this
   // tool to ask clarifying questions.
   //
   // The schema should include:
-  // - questions: An array of question objects, where each object has:
+  // - questions: An array of question objects, where
+  // each object has:
   //   - question: The question to ask (string)
   //   - field: The field name this question is about (string)
-  //   - options: An array of pre-filled answer choices (array of strings)
+  //   - options: An array of pre-filled answer choices
+  //     (array of strings)
   //
   askForClarification: tool({
     // TODO: Write a description for the tool
