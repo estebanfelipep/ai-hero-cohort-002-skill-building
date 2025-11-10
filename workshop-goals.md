@@ -357,7 +357,7 @@
 - Detect hallucinations in end-to-end agentic search system
 - Build LLM-as-judge scorer for automated answer quality evaluation
 
-### [08.01 - Evaluating Memory Extraction](./exercises/08-evals-project-work/08.01-evaluating-memory-tool/explainer/notes.md) (Explainer)
+### [08.01 - Evaluating Memory Extraction](./exercises/08-evals-project-work/08.01-evaluating-memory-extraction/explainer/notes.md) (Explainer)
 
 - Test memory extraction from conversation history using Evalite framework
 - Import `extractMemories()` function from project repo (refactored in 06.03)
