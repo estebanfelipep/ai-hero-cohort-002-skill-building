@@ -10,7 +10,7 @@ Instead of training your own LLM from scratch, you should be thinking about how 
 
 You probably have an idea for how LLMs are trained, but I just want to make it really secure in your head.
 
-![How Are LLMs Trained?](./diagrams/how-are-llms-trained.png)
+![How Are LLMs Trained?](https://res.cloudinary.com/total-typescript/image/upload/v1763461746/ai-hero-images/osdfx8nq03jj4cxxos15.png)
 
 Let's say you're training a 70 billion parameter model. You take in, let's say, 10 terabytes of training data (which is `all-of-human-knowledge_final.md`). You go through a phase called **pre-training**, which basically compresses that data into a much smaller set of parameters.
 
@@ -28,7 +28,7 @@ Whenever you're looking to create some kind of output from the LLM, you need to 
 
 **Hallucinations are pretty much always a symptom of lacking context.**
 
-![Hallucinated Outputs](./diagrams/hallucinated-outputs.png)
+![Hallucinated Outputs](https://res.cloudinary.com/total-typescript/image/upload/v1763461747/ai-hero-images/kyoen3bqskl0jmnbmkti.png)
 
 If you don't retrieve any data, then you can't be surprised when the LLM hallucinates things that it thinks might be there.
 

@@ -14,7 +14,7 @@ BM25 is a keyword search algorithm that balances simplicity with effectiveness. 
 
 - [ ] Understand the three factors that BM25 uses to score documents
 
-![How Does BM25 Work?](./how-does-bm25-work.png)
+![How Does BM25 Work?](https://res.cloudinary.com/total-typescript/image/upload/v1763461749/ai-hero-images/f6obl3a3vjdnx8koodgy.png)
 
 BM25 evaluates documents using three key metrics:
 
