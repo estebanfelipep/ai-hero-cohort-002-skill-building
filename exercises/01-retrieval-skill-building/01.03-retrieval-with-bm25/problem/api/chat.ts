@@ -3,9 +3,12 @@ import {
   convertToModelMessages,
   createUIMessageStream,
   createUIMessageStreamResponse,
+  generateObject,
   streamText,
   type UIMessage,
 } from 'ai';
+import z from 'zod';
+import { searchEmails } from './bm25.ts';
 
 const KEYWORD_GENERATOR_SYSTEM_PROMPT = `
   You are a helpful email assistant, able to search through emails for information.
@@ -20,12 +23,19 @@ export const POST = async (req: Request): Promise<Response> => {
     execute: async ({ writer }) => {
       // TODO: Implement a keyword generator that generates a list of keywords
       // based on the conversation history. Use generateObject to do this.
-      const keywords = TODO;
+      const keywordsGenerator = await generateObject({
+        model: google('gemini-2.5-flash'),
+        system: KEYWORD_GENERATOR_SYSTEM_PROMPT,
+        messages: convertToModelMessages(messages),
+        schema: z.array(z.string()),
+      });
+      const keywords = keywordsGenerator.object;
 
       // TODO: Use the searchEmails function to get the top X number of
       // search results based on the keywords
-      const topSearchResults = TODO;
+      const topSearchResults = await searchEmails(keywords);
 
+      console.log('ep:', { keywords, topSearchResults });
       const emailSnippets = [
         '## Email Snippets',
         ...topSearchResults.map((result, i) => {

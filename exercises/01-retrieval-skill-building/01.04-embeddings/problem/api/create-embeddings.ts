@@ -123,7 +123,9 @@ export const searchEmails = async (query: string) => {
     );
   }
   const emails = await loadEmails();
-  const emailsMap = new Map(emails.map((email) => [email.id, email]));
+  const emailsMap = new Map(
+    emails.map((email) => [email.id, email]),
+  );
 
   const queryEmbedding = await embedOnePieceOfText(query);
 
@@ -139,7 +141,7 @@ export const searchEmails = async (query: string) => {
   return scores.sort((a, b) => b.score - a.score);
 };
 
-export const EMBED_CACHE_KEY = 'emails-google';
+export const EMBED_CACHE_KEY = 'emails';
 
 const embedLotsOfText = async (
   emails: Email[],
@@ -149,14 +151,35 @@ const embedLotsOfText = async (
     embedding: number[];
   }[]
 > => {
+  const emailsAsString = emails.map((email) => {
+    const { subject, body } = email;
+
+    return `Subject:${subject}
+    Body: ${body}
+    `;
+  });
   // TODO: Implement this function by using the embedMany function
-  throw new Error('Not implemented');
+  const result = await embedMany({
+    model: myEmbeddingModel,
+    values: emailsAsString,
+  });
+
+  return result.embeddings.map((embedding, index) => ({
+    id: emails[index]!.id,
+    embedding,
+  }));
 };
 
 const embedOnePieceOfText = async (
   text: string,
 ): Promise<number[]> => {
   // TODO: Implement this function by using the embed function
+  const result = await embed({
+    model: myEmbeddingModel,
+    value: text,
+  });
+
+  return result.embedding;
 };
 
 const calculateScore = (
@@ -164,4 +187,5 @@ const calculateScore = (
   embedding: number[],
 ): number => {
   // TODO: Implement this function by using the cosineSimilarity function
+  return cosineSimilarity(queryEmbedding, embedding);
 };

@@ -32,10 +32,26 @@ export const POST = async (req: Request): Promise<Response> => {
     execute: async ({ writer }) => {
       // TODO: call the searchEmails function with the
       // conversation history to get the search results
-      const searchResults = TODO;
+      const searchResults = await searchEmails(
+        formatMessageHistory(messages),
+      );
 
       // TODO: take the top X search results
-      const topSearchResults = TODO;
+      const topSearchResults = searchResults.slice(0, 10);
+      console.log(
+        'ep: searchResults',
+        searchResults.map(
+          (result) =>
+            `${result.email.subject} (${result.score})`,
+        ),
+      );
+      console.log(
+        'ep: topSearchResults',
+        topSearchResults.map(
+          (result) =>
+            `${result.email.subject} (${result.score})`,
+        ),
+      );
 
       const emailSnippets = [
         '## Emails',
@@ -61,7 +77,9 @@ export const POST = async (req: Request): Promise<Response> => {
       ].join('\n\n');
 
       const answer = streamText({
-        model: google('gemini-2.5-flash'),
+        // model: google('gemini-2.5-flash'),
+        // Use the Gemini 2.0 Flash model, it understands markdown formatting better
+        model: google('gemini-2.0-flash-001'),
         system: `You are a helpful email assistant that answers questions based on email content.
           You should use the provided emails to answer questions accurately.
           ALWAYS cite sources using markdown formatting with the email subject as the source.

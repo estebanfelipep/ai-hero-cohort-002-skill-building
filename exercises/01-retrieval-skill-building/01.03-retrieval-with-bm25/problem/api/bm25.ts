@@ -38,9 +38,13 @@ export const searchEmails = async (keywords: string[]) => {
   );
 
   return scores
-    .map((score, index) => ({
-      score,
-      email: emails[index],
-    }))
+    .flatMap((score, index) => {
+      if (score === 0) return [];
+
+      return {
+        score,
+        email: emails[index],
+      };
+    })
     .sort((a, b) => b.score - a.score);
 };
