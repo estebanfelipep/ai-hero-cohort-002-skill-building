@@ -12,6 +12,10 @@ evalite.each([
     name: 'Gemini 2.0 Flash',
     input: google('gemini-2.0-flash'),
   },
+  {
+    name: 'Gemini 2.0 Flash Lite',
+    input: google('gemini-2.0-flash-lite'),
+  },
 ])('Agent Tool Call Evaluation', {
   data: [
     {

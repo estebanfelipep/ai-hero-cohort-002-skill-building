@@ -1,4 +1,4 @@
-import { stepCountIs } from 'ai';
+import { stepCountIs, type UIMessage } from 'ai';
 import { evalite } from 'evalite';
 import { runAgent } from './agent.ts';
 import { google } from '@ai-sdk/google';
@@ -47,17 +47,74 @@ evalite.each([
       ),
       expected: { tool: 'setReminder' },
     },
-    // TODO: Add 5-10 adversarial test cases to challenge the agent
-    // Ideas for adversarial inputs:
-    // - Ambiguous requests that could match multiple tools (e.g., "organize my schedule")
-    // - Very long, complex requests with multiple potential actions
-    // - Requests with missing critical information (e.g., "book a flight" without dates/locations)
-    // - Conversational input with no action needed (e.g., "thanks!")
-    // - Questions about tools vs. actual tool requests (e.g., "how do I create a backup?")
-    // - Overlapping tool functionality (e.g., "save this for later" - task? reminder? backup?)
-    // - Hypothetical scenarios (e.g., "what would happen if...")
-    // - Partial information requiring clarification
-    // For cases where NO tool should be called, use: expected: { tool: null }
+    // Edge case: Ambiguous request that could match multiple tools
+    {
+      input: createUIMessageFixture(
+        'I need to organize my schedule',
+      ),
+      expected: { tool: null }, // Could be searchCalendarEvents, createTask, setReminder
+    },
+    // Edge case: Very long, complex request with multiple potential actions
+    {
+      input: createUIMessageFixture(
+        'I need to prepare for a big presentation next week. Can you help me create a spreadsheet to track all the tasks I need to complete, set reminders for the key milestones, search for the latest industry data online, and also check what meetings I have scheduled that might conflict with my preparation time?',
+      ),
+      expected: { tool: null }, // Multiple valid tools, unclear priority
+    },
+    // Edge case: Request with missing critical information
+    {
+      input: createUIMessageFixture(
+        'Book a flight for next month',
+      ),
+      expected: { tool: null }, // Missing from, to, specific date
+    },
+    // Edge case: Conversational input with no action needed
+    {
+      input: createUIMessageFixture(
+        'Thanks for your help earlier!',
+      ),
+      expected: { tool: null },
+    },
+    // Edge case: Request that sounds like action but is actually a question
+    {
+      input: createUIMessageFixture(
+        'Can you explain how to create a backup of my files?',
+      ),
+      expected: { tool: null },
+    },
+    // Edge case: Overlapping tool functionality
+    {
+      input: createUIMessageFixture(
+        'I want to save this information for later',
+      ),
+      expected: { tool: null }, // Could be createTask, setReminder, or createBackup
+    },
+    // Edge case: Request with conflicting constraints
+    {
+      input: createUIMessageFixture(
+        'Send an urgent email but make sure to translate it to Spanish first',
+      ),
+      expected: { tool: null }, // Requires coordination between tools
+    },
+    // Edge case: Hypothetical scenario (no action should be taken)
+    {
+      input: createUIMessageFixture(
+        'What would happen if I sent an email to the whole company?',
+      ),
+      expected: { tool: null },
+    },
+    // Edge case: Partial information requiring clarification
+    {
+      input: createUIMessageFixture('Create a reminder'),
+      expected: { tool: null }, // Missing message and time
+    },
+    // Edge case: Request that seems tool-related but is actually general knowledge
+    {
+      input: createUIMessageFixture(
+        "What's the difference between economy and business class on flights?",
+      ),
+      expected: { tool: null },
+    },
   ],
   task: async (messages, model) => {
     const result = runAgent(

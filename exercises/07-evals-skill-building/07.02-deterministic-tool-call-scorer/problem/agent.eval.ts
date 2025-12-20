@@ -12,30 +12,35 @@ evalite('Agent Tool Call Evaluation', {
         'What is the weather in San Francisco right now?',
       ),
       // TODO: Add expected tool call
+      expected: { toolName: 'checkWeather' },
     },
     {
       input: createUIMessageFixture(
         'Create a spreadsheet called "Q4 Sales" with columns for Date, Product, and Revenue',
       ),
       // TODO: Add expected tool call
+      expected: { toolName: 'createSpreadsheet' },
     },
     {
       input: createUIMessageFixture(
         'Send an email to john@example.com with subject "Meeting Tomorrow" and body "Don\'t forget our 2pm meeting"',
       ),
       // TODO: Add expected tool call
+      expected: { toolName: 'sendEmail' },
     },
     {
       input: createUIMessageFixture(
         'Translate "Hello world" to Spanish',
       ),
       // TODO: Add expected tool call
+      expected: { toolName: 'translateText' },
     },
     {
       input: createUIMessageFixture(
         'Set a reminder for tomorrow at 9am to call the dentist',
       ),
       // TODO: Add expected tool call
+      expected: { toolName: 'setReminder' },
     },
   ],
   task: async (messages) => {
@@ -66,7 +71,11 @@ evalite('Agent Tool Call Evaluation', {
       scorer: ({ output, expected }) => {
         // TODO: Check if any toolCall in output.toolCalls matches expected.tool
         // Return 1 if match found, 0 otherwise
-        return 0;
+        const toolWasCalled = output.toolCalls.some(
+          (tool) => tool.toolName === expected.toolName,
+        );
+
+        return toolWasCalled ? 1 : 0;
       },
     },
   ],

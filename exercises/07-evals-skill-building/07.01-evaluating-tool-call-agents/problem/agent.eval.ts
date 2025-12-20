@@ -33,14 +33,25 @@ evalite('Agent Tool Call Evaluation', {
     );
 
     // TODO: Consume the stream so the agent completes execution
+    await result.consumeStream();
 
     // TODO: Extract the toolCalls from the result
     // The result object has a toolCalls property that you need to await
     // Map the toolCalls to include only toolName and input for easier inspection
 
+    const toolCalls = (await result.toolCalls).map((tool) => ({
+      toolName: tool.toolName,
+      input: tool.input,
+    }));
+
     // TODO: Get the text response from the result
+    const text = await result.text;
 
     // TODO: Return an object with toolCalls and text properties
-    return {};
+    return {
+      toolCalls,
+      text,
+    };
   },
+  scorers: [],
 });

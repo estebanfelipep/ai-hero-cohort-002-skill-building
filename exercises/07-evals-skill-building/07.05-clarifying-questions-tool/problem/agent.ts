@@ -1,4 +1,3 @@
-import { google } from '@ai-sdk/google';
 import {
   convertToModelMessages,
   streamText,
@@ -10,30 +9,29 @@ import {
 import { z } from 'zod';
 
 const tools = {
-  // TODO: Implement the askForClarification tool
-  // This tool should be called when the agent needs more
-  // information from the user to complete a request. For
-  // example, if the user says "Book a flight to Paris" but
-  // doesn't specify dates, origin, or passengers, the
-  // agent should call this but doesn't specify dates,
-  // origin, or passengers, the agent should call this
-  // tool to ask clarifying questions.
-  //
-  // The schema should include:
-  // - questions: An array of question objects, where
-  // each object has:
-  //   - question: The question to ask (string)
-  //   - field: The field name this question is about (string)
-  //   - options: An array of pre-filled answer choices
-  //     (array of strings)
-  //
   askForClarification: tool({
-    // TODO: Write a description for the tool
-    description: '',
+    description:
+      'This tool is used to ask the user clarifying questions when their request is missing critical information needed to complete the task. Provide pre-filled answer options for each question when possible.',
     inputSchema: z.object({
-      // TODO: Add the schema here
+      questions: z
+        .array(
+          z.object({
+            question: z
+              .string()
+              .describe('The question to ask the user'),
+            field: z
+              .string()
+              .describe('The field name this question is about'),
+            options: z
+              .array(z.string())
+              .describe(
+                'Pre-filled answer choices for the user to select from',
+              ),
+          }),
+        )
+        .describe('Array of clarifying questions to ask'),
     }),
-    execute: async () => {
+    execute: async ({ questions }) => {
       return 'askForClarification tool called';
     },
   }),
@@ -392,10 +390,85 @@ export const runAgent = (
     messages: convertToModelMessages(messages),
     tools,
     stopWhen,
-    // TODO: Update the system prompt to instruct the agent to use the
-    // askForClarification tool when the user's request is missing
-    // critical information needed to complete the task
-    system: `Today's date is ${new Date().toISOString().split('T')[0]}.`,
+    system: `Today's date is ${new Date().toISOString().split('T')[0]}.
+
+When the user makes a request that is missing critical information needed to complete the task, use the askForClarification tool to ask for the missing information. Provide pre-filled answer options when possible to make it easier for the user to respond.
+
+Examples of when to use the askForClarification tool:
+
+1. "Book a flight to Paris"
+{
+  "questions": [
+    {
+      "question": "Where are you departing from?",
+      "field": "from",
+      "options": ["New York", "London", "Los Angeles", "San Francisco", "Chicago"]
+    },
+    {
+      "question": "When would you like to depart?",
+      "field": "departDate",
+      "options": ["Today", "Tomorrow", "This weekend", "Next week"]
+    },
+    {
+      "question": "How many passengers?",
+      "field": "passengers",
+      "options": ["1", "2", "3", "4+"]
+    }
+  ]
+}
+
+2. "Send an email to John"
+{
+  "questions": [
+    {
+      "question": "What is John's email address?",
+      "field": "to",
+      "options": ["john@company.com", "john.smith@company.com", "john.doe@company.com"]
+    },
+    {
+      "question": "What should the subject line be?",
+      "field": "subject",
+      "options": ["Follow-up", "Meeting request", "Quick question"]
+    },
+    {
+      "question": "What would you like to say in the email?",
+      "field": "body",
+      "options": ["I'll write my own message"]
+    }
+  ]
+}
+
+3. "Create an invoice"
+{
+  "questions": [
+    {
+      "question": "What is the client's name?",
+      "field": "clientName",
+      "options": ["Acme Corp", "Tech Startup Inc", "Global Services LLC"]
+    },
+    {
+      "question": "What is the client's email address?",
+      "field": "clientEmail",
+      "options": ["billing@client.com", "accounts@client.com"]
+    },
+    {
+      "question": "What items or services are you invoicing for?",
+      "field": "items",
+      "options": ["Consulting services", "Software development", "Design work", "Custom items"]
+    },
+    {
+      "question": "When is payment due?",
+      "field": "dueDate",
+      "options": ["Net 15", "Net 30", "Net 60", "Due on receipt"]
+    }
+  ]
+}
+
+Do NOT ask for clarification if the request already contains all the necessary information to complete the task.
+
+ONLY ask for clarification using the askForClarification tool.
+
+`,
   });
 
   return result;
